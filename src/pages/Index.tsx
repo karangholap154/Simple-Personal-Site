@@ -25,7 +25,7 @@ const Index = () => {
             Hey, I'm Karan Gholap <span className="inline-block">👋</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            I'm a Full Stack Web Developer from Pune, India, passionate about building responsive, user-friendly applications and making the web a better place.
+            I'm a Software Developer from Pune, India, passionate about building responsive, user-friendly applications and making the web a better place.
           </p>
         </section>
         
@@ -112,11 +112,11 @@ const Index = () => {
             <span>Follow me</span>
           </a>
           <a
-            href="mailto:karangholap.work@gmail.com"
+            href="mailto:karangholap@zohomail.in"
             className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors"
           >
             <span className="text-lg">📧</span>
-            <span>karangholap.work@gmail.com</span>
+            <span>karangholap@zohomail.in</span>
           </a>
         </section>
         

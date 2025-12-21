@@ -1,7 +1,6 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { Download } from "lucide-react";
 
 const Resume = () => {
   return (
@@ -11,16 +10,7 @@ const Resume = () => {
           <Navigation />
         
         <section className="py-8">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-semibold">Resume</h1>
-            <a
-              href="https://drive.google.com/uc?export=download&id=1QUrYOcDSl6qWGJ1zmvJdA6t2lRe6a-MG"
-              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-muted rounded-lg text-sm transition-colors"
-            >
-              <Download size={16} />
-              Download PDF
-            </a>
-          </div>
+          <h1 className="text-2xl font-semibold mb-8">Resume</h1>
           
           {/* Education */}
           <div className="mb-10">

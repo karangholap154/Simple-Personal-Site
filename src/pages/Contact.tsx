@@ -6,7 +6,7 @@ import { Mail, Github, Linkedin, ExternalLink } from "lucide-react";
 const socialLinks = [
   { name: "GitHub", url: "https://github.com/karangholap154", icon: Github },
   { name: "LinkedIn", url: "https://linkedin.com/in/karangholap", icon: Linkedin },
-  { name: "Email", url: "mailto:karangholap.work@gmail.com", icon: Mail },
+  { name: "Email", url: "mailto:karangholap@zohomail.in", icon: Mail },
 ];
 
 const otherLinks = [

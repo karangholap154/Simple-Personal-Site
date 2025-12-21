@@ -12,7 +12,7 @@ const Footer = () => {
         />
         <div className="flex gap-6">
         <a
-          href="mailto:karangholap.work@gmail.com"
+          href="mailto:karangholap@zohomail.in"
           className="text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Email"
         >
