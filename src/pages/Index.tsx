@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import SkillsSection from "@/components/SkillsSection";
 import ProjectsPreview from "@/components/ProjectsPreview";
 import PageTransition from "@/components/PageTransition";
+import { Link } from "react-router-dom";
 import profileImage from "@/assets/profile.png";
 
 const Index = () => {
@@ -53,16 +54,16 @@ const Index = () => {
             
             <p>
               I'm also the <span className="text-foreground font-medium">Founder and Software Developer</span> of{" "}
-              <a href="/private-academy" className="inline-block">
+              <Link to="/private-academy" className="inline-block">
                 <CompanyBadge name="Private Academy Engineering" icon="📚" />
-              </a>, an educational technology platform for engineering students where I develop and deploy full-stack web applications and manage platform growth.{" "}
-              <a href="/private-academy" className="text-foreground link-underline">Learn more →</a>
+              </Link>, an educational technology platform for engineering students where I develop and deploy full-stack web applications and manage platform growth.{" "}
+              <Link to="/private-academy" className="text-foreground link-underline">Learn more →</Link>
             </p>
             
             <p>
               Previously, I worked as a <span className="text-foreground font-medium">Technology & Business Efficiency Associate</span> at{" "}
               <CompanyBadge name="BURSANA Fashion Tech" icon="👔" />, where I collaborated on technology solutions to improve business efficiency and contributed to cross-functional projects bridging technology and business needs. For more details about my experience, check out my{" "}
-              <a href="/resume" className="text-foreground link-underline">resume</a>.
+              <Link to="/resume" className="text-foreground link-underline">resume</Link>.
             </p>
           </div>
         </section>
