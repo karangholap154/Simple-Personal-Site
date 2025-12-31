@@ -3,21 +3,41 @@ import { Link } from "react-router-dom";
 
 const projects = [
   {
-    title: "Smart Study Material Provider",
-    description: "Educational platform with organized study materials and modern UI",
-    tech: ["React.js", "Tailwind CSS", "Supabase"],
+    title: "Private Academy Engineering – Smart Study Platform",
+    description: "A centralized platform providing structured study materials and exam resources.",
+    tech: [
+      "React.js",
+      "Tailwind CSS",
+      "Framer Motion",
+      "TypeScript",
+      "Supabase",
+    ],
     link: "https://www.privateacademy.in/",
   },
   {
     title: "PrivMate - AI Study Companion",
     description: "AI-powered study companion with instant, accurate answers",
-    tech: ["React.js", "Supabase", "Gemini API"],
+    tech: [
+      "React.js",
+      "Tailwind CSS",
+      "ShadCn/ui",
+      "TypeScript",
+      "Supabase",
+      "Gemini API",
+    ],
     link: "https://chat.privateacademy.in/",
   },
   {
     title: "Bilix - Invoice Generator",
     description: "Sleek invoice generator with customizable templates and PDF export",
-    tech: ["Next.js", "TypeScript", "Supabase"],
+    tech: [
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "ShadCn/ui",
+      "jsPDF",
+      "Supabase",
+    ],
     link: "https://bilix.vercel.app/",
   },
 ];

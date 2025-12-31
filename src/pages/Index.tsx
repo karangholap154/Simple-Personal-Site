@@ -36,7 +36,7 @@ const Index = () => {
         <section className="py-8">
           <h2 className="text-xl font-semibold mb-6">About Me</h2>
           <p className="text-muted-foreground leading-relaxed">
-            I recently completed my Bachelor's in Computer Engineering from the University of Mumbai. I specialize in building full-stack solutions using React.js, Node.js, and various database systems. With hands-on experience creating healthcare booking systems to e-commerce platforms, I focus on writing clean, maintainable code and delivering exceptional user experiences.
+            I completed my Bachelor’s degree in Computer Engineering from the University of Mumbai. I specialize in building full-stack solutions using React.js, Node.js, and various database systems. With hands-on experience creating healthcare booking systems to e-commerce platforms, I focus on writing clean, maintainable code and delivering exceptional user experiences.
           </p>
         </section>
         

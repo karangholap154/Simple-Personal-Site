@@ -51,10 +51,10 @@ const Resume = () => {
               </div>
               <div className="p-4 bg-secondary/50 rounded-lg">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-medium">Founder</h3>
+                  <h3 className="font-medium">Founder & Software Developer</h3>
                   <span className="text-sm text-muted-foreground">Feb 2023 - Present</span>
                 </div>
-                <p className="text-sm text-foreground/80 mb-2">Private Academy Engineering · Full-Time · Remote</p>
+                <p className="text-sm text-foreground/80 mb-2">Private Academy Engineering · Full-Time</p>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>Founded and leading an educational technology platform for engineering students</li>
                   <li>Developed and deployed full-stack web applications using modern technologies</li>
@@ -67,7 +67,7 @@ const Resume = () => {
                   <h3 className="font-medium">Technology & Business Efficiency Associate</h3>
                   <span className="text-sm text-muted-foreground">Aug 2025 - Oct 2025</span>
                 </div>
-                <p className="text-sm text-foreground/80 mb-2">BURSANA Fashion Tech · Internship · Remote</p>
+                <p className="text-sm text-foreground/80 mb-2">BURSANA Fashion Tech · Internship</p>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                   <li>Collaborated on technology solutions to improve business efficiency</li>
                   <li>Assisted in streamlining operational processes using tech-driven approaches</li>
