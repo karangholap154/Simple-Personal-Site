@@ -8,7 +8,6 @@ const projects = [
     tech: [
       "React.js",
       "Tailwind CSS",
-      "Framer Motion",
       "TypeScript",
       "Supabase",
     ],
@@ -20,9 +19,7 @@ const projects = [
     tech: [
       "React.js",
       "Tailwind CSS",
-      "ShadCn/ui",
       "TypeScript",
-      "Supabase",
       "Gemini API",
     ],
     link: "https://chat.privateacademy.in/",
@@ -33,10 +30,8 @@ const projects = [
     tech: [
       "Next.js",
       "TypeScript",
-      "Tailwind CSS",
       "ShadCn/ui",
       "jsPDF",
-      "Supabase",
     ],
     link: "https://bilix.vercel.app/",
   },
