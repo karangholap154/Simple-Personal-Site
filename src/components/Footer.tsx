@@ -1,4 +1,5 @@
-import { Mail, Github, Linkedin } from "lucide-react";
+import { Mail, Github, Linkedin, Coffee } from "lucide-react";
+import { Link } from "react-router-dom";
 import signatureImage from "@/assets/signature.png";
 
 const Footer = () => {
@@ -47,6 +48,13 @@ const Footer = () => {
         >
           <Linkedin size={20} />
         </a>
+        <Link
+          to="/support"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Support"
+        >
+          <Coffee size={20} />
+        </Link>
         </div>
       </div>
     </footer>
