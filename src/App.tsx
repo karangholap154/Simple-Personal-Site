@@ -9,7 +9,6 @@ import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import Resume from "./pages/Resume";
 import Contact from "./pages/Contact";
-import Blog from "./pages/Blog";
 import PrivateAcademy from "./pages/PrivateAcademy";
 import Support from "./pages/Support";
 import Gallery from "./pages/Gallery";
@@ -25,7 +24,6 @@ const AnimatedRoutes = () => {
         <Route path="/projects" element={<Projects />} />
         <Route path="/resume" element={<Resume />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/blog" element={<Blog />} />
         <Route path="/private-academy" element={<PrivateAcademy />} />
         <Route path="/support" element={<Support />} />
         <Route path="/gallery" element={<Gallery />} />

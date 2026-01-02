@@ -1,7 +1,9 @@
+import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { Camera } from "lucide-react";
+import { Camera, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Dynamically import all images from the gallery folder
 const galleryImages = import.meta.glob<{ default: string }>(
@@ -10,10 +12,52 @@ const galleryImages = import.meta.glob<{ default: string }>(
 );
 
 const Gallery = () => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
   const images = Object.entries(galleryImages).map(([path, module]) => ({
     src: module.default,
     name: path.split("/").pop()?.split(".")[0] || "Photo",
   }));
+
+  const openLightbox = (index: number) => setSelectedIndex(index);
+  const closeLightbox = () => setSelectedIndex(null);
+
+  const goToPrevious = useCallback(() => {
+    if (selectedIndex !== null) {
+      setSelectedIndex(selectedIndex === 0 ? images.length - 1 : selectedIndex - 1);
+    }
+  }, [selectedIndex, images.length]);
+
+  const goToNext = useCallback(() => {
+    if (selectedIndex !== null) {
+      setSelectedIndex(selectedIndex === images.length - 1 ? 0 : selectedIndex + 1);
+    }
+  }, [selectedIndex, images.length]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedIndex === null) return;
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") goToPrevious();
+      if (e.key === "ArrowRight") goToNext();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, goToPrevious, goToNext]);
+
+  // Prevent body scroll when lightbox is open
+  useEffect(() => {
+    if (selectedIndex !== null) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedIndex]);
 
   return (
     <PageTransition>
@@ -34,7 +78,8 @@ const Gallery = () => {
                 {images.map((image, index) => (
                   <div
                     key={index}
-                    className="aspect-square overflow-hidden rounded-lg bg-muted"
+                    className="aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer"
+                    onClick={() => openLightbox(index)}
                   >
                     <img
                       src={image.src}
@@ -56,6 +101,70 @@ const Gallery = () => {
           <Footer />
         </div>
       </div>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {selectedIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+            onClick={closeLightbox}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeLightbox}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+              aria-label="Close lightbox"
+            >
+              <X className="h-8 w-8" />
+            </button>
+
+            {/* Previous button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrevious();
+              }}
+              className="absolute left-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft className="h-10 w-10" />
+            </button>
+
+            {/* Next button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNext();
+              }}
+              className="absolute right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+              aria-label="Next photo"
+            >
+              <ChevronRight className="h-10 w-10" />
+            </button>
+
+            {/* Image */}
+            <motion.img
+              key={selectedIndex}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              src={images[selectedIndex].src}
+              alt={images[selectedIndex].name}
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Image counter */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
+              {selectedIndex + 1} / {images.length}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 };

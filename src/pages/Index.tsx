@@ -88,7 +88,7 @@ const Index = () => {
         <hr className="border-border my-8" />
         
         {/* Writing Section */}
-        <section className="py-8">
+        {/* <section className="py-8">
           <h2 className="text-xl font-semibold mb-6">Writing</h2>
           <p className="text-muted-foreground leading-relaxed">
             I share my knowledge and experiences on{" "}
@@ -99,7 +99,7 @@ const Index = () => {
           </p>
         </section>
         
-        <hr className="border-border my-8" />
+        <hr className="border-border my-8" /> */}
         
         {/* Follow Me Section */}
         <section className="py-6 space-y-3">
