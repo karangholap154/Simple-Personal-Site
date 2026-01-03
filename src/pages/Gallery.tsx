@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
+import LazyImage from "@/components/LazyImage";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Camera, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -76,18 +78,14 @@ const Gallery = () => {
             {images.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {images.map((image, index) => (
-                  <div
+                  <LazyImage
                     key={index}
-                    className="aspect-square overflow-hidden rounded-lg bg-muted cursor-pointer"
+                    src={image.src}
+                    alt={image.name}
+                    containerClassName="aspect-square rounded-lg bg-muted cursor-pointer"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     onClick={() => openLightbox(index)}
-                  >
-                    <img
-                      src={image.src}
-                      alt={image.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  </div>
+                  />
                 ))}
               </div>
             ) : (

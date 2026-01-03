@@ -50,6 +50,9 @@
     /* Profile gradient */
     --profile-gradient-from: 280 100% 70%;
     --profile-gradient-to: 200 100% 60%;
+
+    /* Coffee glow */
+    --coffee-glow: 45 100% 50%;
   }
 
   .dark {
@@ -95,6 +98,9 @@
     /* Profile gradient */
     --profile-gradient-from: 280 100% 70%;
     --profile-gradient-to: 200 100% 60%;
+
+    /* Coffee glow */
+    --coffee-glow: 45 100% 55%;
   }
 }
 
@@ -125,5 +131,14 @@
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  .coffee-glow {
+    @apply transition-all duration-300;
+  }
+
+  .coffee-glow:hover {
+    color: hsl(var(--coffee-glow));
+    filter: drop-shadow(0 0 8px hsl(var(--coffee-glow) / 0.6)) drop-shadow(0 0 16px hsl(var(--coffee-glow) / 0.4));
   }
 }

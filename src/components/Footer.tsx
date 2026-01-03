@@ -50,7 +50,7 @@ const Footer = () => {
         </a>
         <Link
           to="/support"
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="text-muted-foreground coffee-glow"
           aria-label="Support"
         >
           <Coffee size={20} />
