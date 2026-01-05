@@ -26,13 +26,17 @@ const Gallery = () => {
 
   const goToPrevious = useCallback(() => {
     if (selectedIndex !== null) {
-      setSelectedIndex(selectedIndex === 0 ? images.length - 1 : selectedIndex - 1);
+      setSelectedIndex(
+        selectedIndex === 0 ? images.length - 1 : selectedIndex - 1
+      );
     }
   }, [selectedIndex, images.length]);
 
   const goToNext = useCallback(() => {
     if (selectedIndex !== null) {
-      setSelectedIndex(selectedIndex === images.length - 1 ? 0 : selectedIndex + 1);
+      setSelectedIndex(
+        selectedIndex === images.length - 1 ? 0 : selectedIndex + 1
+      );
     }
   }, [selectedIndex, images.length]);
 
@@ -71,7 +75,10 @@ const Gallery = () => {
             <div className="mb-8">
               <h1 className="text-2xl font-bold mb-4">Casual Photography</h1>
               <p className="text-muted-foreground leading-relaxed">
-                When I’m not developing, I enjoy capturing casual photography, there’s something uniquely rewarding about slowing down and preserving everyday moments.
+                When I’m not developing, I enjoy capturing casual photography
+                with my <strong>Nothing Phone 3a</strong>, there’s something
+                uniquely rewarding about slowing down and preserving everyday
+                moments.
               </p>
             </div>
 
