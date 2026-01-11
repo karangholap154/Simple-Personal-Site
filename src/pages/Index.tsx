@@ -133,7 +133,12 @@ const Index = () => {
             >
               <span className="text-lg">📧</span>
               <span>karangholap@zohomail.in</span>
-            </a>
+              </a>
+              <div className="flex items-center gap-2 text-muted-foreground/60 text-sm pt-2">
+              <span>Press</span>
+              <kbd className="px-2 py-0.5 text-xs font-mono bg-muted/50 border border-border rounded">⌘ + K</kbd>
+              <span>to navigate quickly</span>
+            </div>
           </section>
         </ScrollReveal>
         
