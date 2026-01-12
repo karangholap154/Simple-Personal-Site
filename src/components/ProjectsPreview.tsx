@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const projects = [
   {
@@ -37,6 +38,25 @@ const projects = [
   },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const projectVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.4, ease: "easeOut" as const },
+  },
+};
+
 const ProjectsPreview = () => {
   return (
     <section className="py-8">
@@ -50,14 +70,21 @@ const ProjectsPreview = () => {
         </Link>
       </div>
       
-      <div className="space-y-4">
+      <motion.div
+        className="space-y-4"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
         {projects.map((project) => (
-          <a
+          <motion.a
             key={project.title}
             href={project.link}
             target="_blank"
             rel="noopener noreferrer"
             className="block p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
+            variants={projectVariants}
           >
             <div className="flex items-start justify-between">
               <div>
@@ -75,9 +102,9 @@ const ProjectsPreview = () => {
                 </div>
               </div>
             </div>
-          </a>
+          </motion.a>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 };
