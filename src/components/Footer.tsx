@@ -1,4 +1,4 @@
-import { Mail, Github, Linkedin, Coffee } from "lucide-react";
+import { Mail, Github, Linkedin, Instagram, Coffee } from "lucide-react";
 import { Link } from "react-router-dom";
 import signatureImage from "@/assets/signature.png";
 
@@ -47,6 +47,15 @@ const Footer = () => {
           aria-label="LinkedIn"
         >
           <Linkedin size={20} />
+        </a>
+        <a
+          href="https://www.instagram.com/thekarangholap"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Instagram"
+        >
+          <Instagram size={20} />
         </a>
         <Link
           to="/support"

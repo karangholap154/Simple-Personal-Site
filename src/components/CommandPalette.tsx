@@ -19,6 +19,7 @@ import {
   Github,
   Linkedin,
   Twitter,
+  Instagram,
 } from "lucide-react";
 
 const CommandPalette = () => {
@@ -54,17 +55,10 @@ const CommandPalette = () => {
 
   const externalLinks = [
     { name: "GitHub", icon: Github, href: "https://github.com/karangholap154" },
-    {
-      name: "LinkedIn",
-      icon: Linkedin,
-      href: "https://linkedin.com/in/karangholap",
-    },
-    { name: "Twitter", icon: Twitter, href: "https://x.com/TheKaranGholap" },
-    {
-      name: "Buy Me a Coffee",
-      icon: Coffee,
-      href: "https://buymeacoffee.com/karangholap",
-    },
+    { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com/in/karangholap" },
+    { name: "X (Twitter)", icon: Twitter, href: "https://x.com/TheKaranGholap" },
+    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/thekarangholap" },
+    { name: "Buy Me a Coffee", icon: Coffee, href: "https://buymeacoffee.com" },
   ];
 
   return (
@@ -88,9 +82,7 @@ const CommandPalette = () => {
           {externalLinks.map((link) => (
             <CommandItem
               key={link.href}
-              onSelect={() =>
-                runCommand(() => window.open(link.href, "_blank"))
-              }
+              onSelect={() => runCommand(() => window.open(link.href, "_blank"))}
               className="cursor-pointer"
             >
               <link.icon className="mr-2 h-4 w-4" />

@@ -1,11 +1,12 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { Mail, Github, Linkedin, ExternalLink } from "lucide-react";
+import { Mail, Github, Linkedin, Instagram, ExternalLink } from "lucide-react";
 
 const socialLinks = [
   { name: "GitHub", url: "https://github.com/karangholap154", icon: Github },
   { name: "LinkedIn", url: "https://linkedin.com/in/karangholap", icon: Linkedin },
+  { name: "Instagram", url: "https://www.instagram.com/thekarangholap", icon: Instagram },
   { name: "Email", url: "mailto:karangholap@zohomail.in", icon: Mail },
 ];
 
