@@ -311,7 +311,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
               </button>
               <button
                 onClick={handleFullscreen}
-                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
+                className="hidden md:block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
                 aria-label={
                   isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
                 }
@@ -336,7 +336,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
               isFullscreen
                 ? "h-[calc(100vh-48px)]"
-                : "h-[70vh] sm:h-[70vh] md:h-[60vh] lg:h-[500px]"
+                : "h-[75vh] sm:h-[75vh] md:h-[60vh] lg:h-[500px]"
             }`}
           >
             {/* ASCII Art Name */}
@@ -365,9 +365,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                   className="mb-2 sm:mb-3"
                 >
                   <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                    <span className="text-[hsl(142,70%,55%)]">
-                      dev@karan
-                    </span>
+                    <span className="text-[hsl(142,70%,55%)]">dev@karan</span>
                     <span className="text-[hsl(0,0%,50%)]">~</span>
                     <span className="text-[hsl(0,0%,50%)]">$</span>
                     <span className="text-[hsl(0,0%,95%)]">{item.command}</span>
