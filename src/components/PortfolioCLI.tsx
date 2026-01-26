@@ -258,10 +258,10 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             >
               <Terminal size={16} className="text-[hsl(175,100%,50%)]" />
               <span className="text-xs text-[hsl(0,0%,70%)] hidden sm:inline">
-                karan@portfolio
+                dev@karan
               </span>
               <span className="text-xs text-[hsl(0,0%,70%)] sm:hidden">
-                Terminal
+                dev@karan
               </span>
             </button>
           </motion.div>
@@ -324,7 +324,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             </div>
             <div className="flex-1 text-center">
               <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">
-                karan@portfolio — zsh
+                karan@portfolio:~
               </span>
             </div>
           </div>
@@ -366,7 +366,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                 >
                   <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="text-[hsl(142,70%,55%)]">
-                      karan@portfolio
+                      dev@karan
                     </span>
                     <span className="text-[hsl(0,0%,50%)]">~</span>
                     <span className="text-[hsl(0,0%,50%)]">$</span>
@@ -388,7 +388,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
 
             {/* Current Input Line */}
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-              <span className="text-[hsl(142,70%,55%)]">karan@portfolio</span>
+              <span className="text-[hsl(142,70%,55%)]">dev@karan:</span>
               <span className="text-[hsl(0,0%,50%)]">~</span>
               <span className="text-[hsl(0,0%,50%)]">$</span>
               <input
@@ -416,8 +416,8 @@ export const TerminalTrigger = ({ onClick }: { onClick: () => void }) => {
     <button
       onClick={onClick}
       className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-      title="Open Terminal (Portfolio CLI)"
-      aria-label="Open Terminal"
+      title="Terminal"
+      aria-label="Terminal"
     >
       <Terminal size={18} />
     </button>
