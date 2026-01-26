@@ -88,12 +88,7 @@ const commands: Record<string, string | string[]> = {
     "  Instagram  → https://instagram.com/thekarangholap",
     "  Medium     → https://medium.com/@karan_gholap",
   ],
-  resume: [
-    "Resume:",
-    "",
-    "  Opening resume page...",
-    "  Or visit: /resume",
-  ],
+  resume: ["Resume:", "", "  Opening resume page...", "  Or visit: /resume"],
   "open projects": "Navigating to projects page...",
 };
 
@@ -132,7 +127,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
 
   const handleCommand = (cmd: string) => {
     const trimmedCmd = cmd.trim().toLowerCase();
-    
+
     if (!trimmedCmd) return;
 
     setCommandHistory((prev) => [...prev, trimmedCmd]);
@@ -167,7 +162,10 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
         ...prev,
         {
           command: cmd,
-          output: [`Command not found: ${cmd}`, "Type 'help' to see available commands."],
+          output: [
+            `Command not found: ${cmd}`,
+            "Type 'help' to see available commands.",
+          ],
         },
       ]);
     }
@@ -180,7 +178,10 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (commandHistory.length > 0) {
-        const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex;
+        const newIndex =
+          historyIndex < commandHistory.length - 1
+            ? historyIndex + 1
+            : historyIndex;
         setHistoryIndex(newIndex);
         setInput(commandHistory[commandHistory.length - 1 - newIndex] || "");
       }
@@ -222,17 +223,17 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className={`p-0 gap-0 overflow-hidden border-0 bg-transparent [&>button]:hidden transition-all duration-300 ${
-          isFullscreen 
-            ? 'max-w-[100vw] w-[100vw] h-[100vh] rounded-none' 
-            : 'max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw]'
+          isFullscreen
+            ? "max-w-[100vw] w-[100vw] h-[100vh] rounded-none"
+            : "max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw]"
         }`}
       >
         <VisuallyHidden>
           <DialogTitle>Portfolio CLI Terminal</DialogTitle>
         </VisuallyHidden>
-        
+
         {/* Minimized State - Dock Bar */}
         {isMinimized && (
           <motion.div
@@ -240,21 +241,28 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             style={{
-              position: 'fixed',
-              bottom: '16px',
-              left: '50%',
-              transform: 'translateX(-50%)',
+              position: "fixed",
+              bottom: "6px",
+              left: "38%",
+              transform: "translateX(-50%)",
               zIndex: 9999,
             }}
           >
             <button
               onClick={handleRestore}
               className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-[hsl(0,0%,12%)] rounded-lg border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-colors"
-              style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
+              style={{
+                fontFamily:
+                  "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+              }}
             >
               <Terminal size={16} className="text-[hsl(175,100%,50%)]" />
-              <span className="text-xs text-[hsl(0,0%,70%)] hidden sm:inline">karan@portfolio — zsh</span>
-              <span className="text-xs text-[hsl(0,0%,70%)] sm:hidden">Terminal</span>
+              <span className="text-xs text-[hsl(0,0%,70%)] hidden sm:inline">
+                karan@portfolio
+              </span>
+              <span className="text-xs text-[hsl(0,0%,70%)] sm:hidden">
+                Terminal
+              </span>
             </button>
           </motion.div>
         )}
@@ -262,17 +270,20 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
         {/* Main Terminal Window */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ 
-            opacity: isMinimized ? 0 : 1, 
+          animate={{
+            opacity: isMinimized ? 0 : 1,
             scale: isMinimized ? 0.5 : 1,
-            y: isMinimized ? 100 : 0
+            y: isMinimized ? 100 : 0,
           }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
           className={`w-full overflow-hidden border border-border shadow-2xl ${
-            isFullscreen ? 'rounded-none' : 'rounded-xl'
-          } ${isMinimized ? 'pointer-events-none' : ''}`}
-          style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
+            isFullscreen ? "rounded-none" : "rounded-xl"
+          } ${isMinimized ? "pointer-events-none" : ""}`}
+          style={{
+            fontFamily:
+              "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+          }}
         >
           {/* Terminal Header */}
           <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[hsl(0,0%,12%)] border-b border-border">
@@ -283,7 +294,10 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                 aria-label="Close terminal"
                 title="Close"
               >
-                <X size={8} className="absolute inset-0 m-auto text-[hsl(0,30%,20%)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <X
+                  size={8}
+                  className="absolute inset-0 m-auto text-[hsl(0,30%,20%)] opacity-0 group-hover:opacity-100 transition-opacity"
+                />
               </button>
               <button
                 onClick={handleMinimize}
@@ -291,21 +305,27 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                 aria-label="Minimize terminal"
                 title="Minimize"
               >
-                <span className="absolute inset-0 flex items-center justify-center text-[hsl(45,50%,20%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">−</span>
+                <span className="absolute inset-0 flex items-center justify-center text-[hsl(45,50%,20%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">
+                  −
+                </span>
               </button>
               <button
                 onClick={handleFullscreen}
                 className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
-                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                aria-label={
+                  isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                }
                 title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               >
                 <span className="absolute inset-0 flex items-center justify-center text-[hsl(142,50%,15%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">
-                  {isFullscreen ? '↙' : '↗'}
+                  {isFullscreen ? "↙" : "↗"}
                 </span>
               </button>
             </div>
             <div className="flex-1 text-center">
-              <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">karan@portfolio — zsh</span>
+              <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">
+                karan@portfolio — zsh
+              </span>
             </div>
           </div>
 
@@ -314,9 +334,9 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             ref={terminalRef}
             onClick={focusInput}
             className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
-              isFullscreen 
-                ? 'h-[calc(100vh-48px)]' 
-                : 'h-[50vh] sm:h-[55vh] md:h-[60vh] lg:h-[500px]'
+              isFullscreen
+                ? "h-[calc(100vh-48px)]"
+                : "h-[90vh] sm:h-[90vh] md:h-[60vh] lg:h-[500px]"
             }`}
           >
             {/* ASCII Art Name */}
@@ -326,10 +346,13 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
 
             {/* Welcome Message */}
             <p className="text-[hsl(0,0%,70%)] mb-1 text-xs sm:text-sm">
-              Welcome to my portfolio CLI! <span className="inline-block">👋</span>
+              Welcome to my portfolio CLI!{" "}
+              <span className="inline-block">👋</span>
             </p>
             <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
-              Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '<span className="text-[hsl(0,0%,95%)]">?</span>' to see available commands.
+              Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '
+              <span className="text-[hsl(0,0%,95%)]">?</span>' to see available
+              commands.
             </p>
 
             {/* Command History */}
@@ -342,14 +365,19 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                   className="mb-2 sm:mb-3"
                 >
                   <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                    <span className="text-[hsl(142,70%,55%)]">karan@portfolio</span>
+                    <span className="text-[hsl(142,70%,55%)]">
+                      karan@portfolio
+                    </span>
                     <span className="text-[hsl(0,0%,50%)]">~</span>
                     <span className="text-[hsl(0,0%,50%)]">$</span>
                     <span className="text-[hsl(0,0%,95%)]">{item.command}</span>
                   </div>
                   <div className="mt-1 text-[hsl(0,0%,70%)]">
                     {item.output.map((line, lineIndex) => (
-                      <div key={lineIndex} className="whitespace-pre overflow-x-auto">
+                      <div
+                        key={lineIndex}
+                        className="whitespace-pre overflow-x-auto"
+                      >
                         {line || "\u00A0"}
                       </div>
                     ))}
