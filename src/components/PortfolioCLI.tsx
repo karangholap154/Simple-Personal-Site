@@ -112,6 +112,8 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +125,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
 
   useEffect(() => {
     if (open) {
+      setIsMinimized(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
@@ -198,57 +201,134 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
     inputRef.current?.focus();
   };
 
+  const handleClose = () => {
+    setIsFullscreen(false);
+    setIsMinimized(false);
+    onOpenChange(false);
+  };
+
+  const handleMinimize = () => {
+    setIsMinimized(true);
+  };
+
+  const handleRestore = () => {
+    setIsMinimized(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden border-0 bg-transparent">
+      <DialogContent 
+        className={`p-0 gap-0 overflow-hidden border-0 bg-transparent [&>button]:hidden transition-all duration-300 ${
+          isFullscreen 
+            ? 'max-w-[100vw] w-[100vw] h-[100vh] rounded-none' 
+            : 'max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw]'
+        }`}
+      >
         <VisuallyHidden>
           <DialogTitle>Portfolio CLI Terminal</DialogTitle>
         </VisuallyHidden>
+        
+        {/* Minimized State - Dock Bar */}
+        {isMinimized && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            style={{
+              position: 'fixed',
+              bottom: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 9999,
+            }}
+          >
+            <button
+              onClick={handleRestore}
+              className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-[hsl(0,0%,12%)] rounded-lg border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-colors"
+              style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
+            >
+              <Terminal size={16} className="text-[hsl(175,100%,50%)]" />
+              <span className="text-xs text-[hsl(0,0%,70%)] hidden sm:inline">karan@portfolio — zsh</span>
+              <span className="text-xs text-[hsl(0,0%,70%)] sm:hidden">Terminal</span>
+            </button>
+          </motion.div>
+        )}
+
+        {/* Main Terminal Window */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          animate={{ 
+            opacity: isMinimized ? 0 : 1, 
+            scale: isMinimized ? 0.5 : 1,
+            y: isMinimized ? 100 : 0
+          }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="w-full rounded-xl overflow-hidden border border-border shadow-2xl"
+          className={`w-full overflow-hidden border border-border shadow-2xl ${
+            isFullscreen ? 'rounded-none' : 'rounded-xl'
+          } ${isMinimized ? 'pointer-events-none' : ''}`}
           style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
         >
           {/* Terminal Header */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(0,0%,12%)] border-b border-border">
-            <div className="flex gap-2">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[hsl(0,0%,12%)] border-b border-border">
+            <div className="flex gap-1.5 sm:gap-2">
               <button
-                onClick={() => onOpenChange(false)}
-                className="w-3 h-3 rounded-full bg-[hsl(0,70%,55%)] hover:bg-[hsl(0,70%,45%)] transition-colors"
-              />
-              <div className="w-3 h-3 rounded-full bg-[hsl(45,90%,55%)]" />
-              <div className="w-3 h-3 rounded-full bg-[hsl(142,70%,45%)]" />
+                onClick={handleClose}
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(0,70%,55%)] hover:bg-[hsl(0,70%,45%)] transition-colors group relative"
+                aria-label="Close terminal"
+                title="Close"
+              >
+                <X size={8} className="absolute inset-0 m-auto text-[hsl(0,30%,20%)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+              <button
+                onClick={handleMinimize}
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(45,90%,55%)] hover:bg-[hsl(45,90%,45%)] transition-colors group relative"
+                aria-label="Minimize terminal"
+                title="Minimize"
+              >
+                <span className="absolute inset-0 flex items-center justify-center text-[hsl(45,50%,20%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">−</span>
+              </button>
+              <button
+                onClick={handleFullscreen}
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              >
+                <span className="absolute inset-0 flex items-center justify-center text-[hsl(142,50%,15%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">
+                  {isFullscreen ? '↙' : '↗'}
+                </span>
+              </button>
             </div>
             <div className="flex-1 text-center">
-              <span className="text-sm text-[hsl(0,0%,60%)]">karan@portfolio — zsh</span>
+              <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">karan@portfolio — zsh</span>
             </div>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="text-[hsl(0,0%,60%)] hover:text-[hsl(0,0%,80%)] transition-colors"
-            >
-              <X size={16} />
-            </button>
           </div>
 
           {/* Terminal Body */}
           <div
             ref={terminalRef}
             onClick={focusInput}
-            className="bg-[hsl(0,0%,6%)] p-4 h-[400px] overflow-y-auto cursor-text text-sm"
+            className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
+              isFullscreen 
+                ? 'h-[calc(100vh-48px)]' 
+                : 'h-[50vh] sm:h-[55vh] md:h-[60vh] lg:h-[500px]'
+            }`}
           >
             {/* ASCII Art Name */}
-            <pre className="text-xs sm:text-sm leading-tight mb-4 overflow-x-auto whitespace-pre">
+            <pre className="text-[0.5rem] sm:text-xs md:text-sm leading-tight mb-3 sm:mb-4 overflow-x-auto whitespace-pre">
               <span className="text-[hsl(175,100%,50%)]">{ASCII_NAME}</span>
             </pre>
 
             {/* Welcome Message */}
-            <p className="text-[hsl(0,0%,70%)] mb-1">
+            <p className="text-[hsl(0,0%,70%)] mb-1 text-xs sm:text-sm">
               Welcome to my portfolio CLI! <span className="inline-block">👋</span>
             </p>
-            <p className="text-[hsl(0,0%,70%)] mb-4">
+            <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
               Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '<span className="text-[hsl(0,0%,95%)]">?</span>' to see available commands.
             </p>
 
@@ -259,9 +339,9 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                   key={index}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-3"
+                  className="mb-2 sm:mb-3"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="text-[hsl(142,70%,55%)]">karan@portfolio</span>
                     <span className="text-[hsl(0,0%,50%)]">~</span>
                     <span className="text-[hsl(0,0%,50%)]">$</span>
@@ -269,7 +349,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                   </div>
                   <div className="mt-1 text-[hsl(0,0%,70%)]">
                     {item.output.map((line, lineIndex) => (
-                      <div key={lineIndex} className="whitespace-pre">
+                      <div key={lineIndex} className="whitespace-pre overflow-x-auto">
                         {line || "\u00A0"}
                       </div>
                     ))}
@@ -279,7 +359,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             </AnimatePresence>
 
             {/* Current Input Line */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               <span className="text-[hsl(142,70%,55%)]">karan@portfolio</span>
               <span className="text-[hsl(0,0%,50%)]">~</span>
               <span className="text-[hsl(0,0%,50%)]">$</span>
@@ -289,11 +369,11 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)]"
+                className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)]"
                 spellCheck={false}
                 autoComplete="off"
               />
-              <span className="w-2 h-5 bg-[hsl(0,0%,95%)] animate-pulse" />
+              <span className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)] animate-pulse" />
             </div>
           </div>
         </motion.div>
