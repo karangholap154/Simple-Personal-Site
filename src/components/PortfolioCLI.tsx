@@ -336,7 +336,7 @@ const PortfolioCLI = ({ open, onOpenChange }: PortfolioCLIProps) => {
             className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
               isFullscreen
                 ? "h-[calc(100vh-48px)]"
-                : "h-[90vh] sm:h-[90vh] md:h-[60vh] lg:h-[500px]"
+                : "h-[75vh] sm:h-[75vh] md:h-[60vh] lg:h-[500px]"
             }`}
           >
             {/* ASCII Art Name */}
