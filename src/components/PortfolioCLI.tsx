@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence, AnimationControls } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -46,7 +46,7 @@ const commands: Record<string, string | string[]> = {
     "using React.js, Node.js, and various database systems.",
     "",
     "Currently working as a Trainee Developer at CandorWorks",
-    "and Founder of Private Academy Engineering.",
+    "and Founder and Software Developer of Private Academy Engineering.",
   ],
   skills: [
     "Technical Skills:",
@@ -237,6 +237,12 @@ const PortfolioCLI = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         ref={dialogContentRef}
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+        }}
         className={`p-0 gap-0 overflow-hidden border-0 bg-transparent [&>button]:hidden transition-all duration-300 ${
           isFullscreen
             ? "max-w-[100vw] w-[100vw] h-[100vh] rounded-none"
@@ -249,20 +255,21 @@ const PortfolioCLI = ({
 
         {/* Main Terminal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.85, y: 20 }}
           animate={{
             opacity: 1,
             scale: 1,
             x: 0,
             y: 0,
-            borderRadius: "12px",
+            borderRadius: isFullscreen ? "0px" : "12px",
           }}
-          exit={{ opacity: 0, scale: 0.95 }}
           transition={{
-            duration: 0.3,
-            ease: "easeOut",
+            duration: 0.4,
+            type: "spring",
+            damping: 25,
+            stiffness: 300,
           }}
-          className={`w-full overflow-hidden border border-border shadow-2xl ${
+          className={`w-full overflow-hidden border border-border shadow-2xl hover:shadow-[0_25px_50px_-12px_rgba(175,100%,50%,0.1)] transition-shadow duration-300 ${
             isFullscreen ? "rounded-none" : "rounded-xl"
           }`}
           style={{
@@ -273,8 +280,10 @@ const PortfolioCLI = ({
           {/* Terminal Header */}
           <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[hsl(0,0%,12%)] border-b border-border">
             <div className="flex gap-1.5 sm:gap-2">
-              <button
+              <motion.button
                 onClick={handleClose}
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
                 className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(0,70%,55%)] hover:bg-[hsl(0,70%,45%)] transition-colors group relative"
                 aria-label="Close terminal"
                 title="Close"
@@ -283,9 +292,11 @@ const PortfolioCLI = ({
                   size={8}
                   className="absolute inset-0 m-auto text-[hsl(0,30%,20%)] opacity-0 group-hover:opacity-100 transition-opacity"
                 />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={handleMinimize}
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
                 className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(45,90%,55%)] hover:bg-[hsl(45,90%,45%)] transition-colors group relative"
                 aria-label="Minimize terminal"
                 title="Minimize"
@@ -293,10 +304,12 @@ const PortfolioCLI = ({
                 <span className="absolute inset-0 flex items-center justify-center text-[hsl(45,50%,20%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">
                   −
                 </span>
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={handleFullscreen}
-                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+                className="hidden md:block w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,35%)] transition-colors group relative"
                 aria-label={
                   isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
                 }
@@ -305,19 +318,30 @@ const PortfolioCLI = ({
                 <span className="absolute inset-0 flex items-center justify-center text-[hsl(142,50%,15%)] opacity-0 group-hover:opacity-100 transition-opacity text-[8px] font-bold">
                   {isFullscreen ? "↙" : "↗"}
                 </span>
-              </button>
+              </motion.button>
             </div>
-            <div className="flex-1 text-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="flex-1 text-center"
+            >
               <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">
                 karan@portfolio:~
               </span>
-            </div>
+            </motion.div>
           </div>
 
           {/* Terminal Body */}
-          <div
+          <motion.div
             ref={terminalRef}
             onClick={focusInput}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
             className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
               isFullscreen
                 ? "h-[calc(100vh-48px)]"
@@ -325,52 +349,101 @@ const PortfolioCLI = ({
             }`}
           >
             {/* ASCII Art Name */}
-            <pre className="text-[0.5rem] sm:text-xs md:text-sm leading-tight mb-3 sm:mb-4 overflow-x-auto whitespace-pre">
+            <motion.pre
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className="text-[0.5rem] sm:text-xs md:text-sm leading-tight mb-3 sm:mb-4 overflow-x-auto whitespace-pre"
+            >
               <span className="text-[hsl(175,100%,50%)]">{ASCII_NAME}</span>
-            </pre>
+            </motion.pre>
 
             {/* Welcome Message */}
-            <p className="text-[hsl(0,0%,70%)] mb-1 text-xs sm:text-sm">
-              Welcome to my portfolio CLI!{" "}
-              <span className="inline-block">👋</span>
-            </p>
-            <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
-              Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '
-              <span className="text-[hsl(0,0%,95%)]">?</span>' to see available
-              commands.
-            </p>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+            >
+              <p className="text-[hsl(0,0%,70%)] mb-1 text-xs sm:text-sm">
+                Welcome to my portfolio CLI!{" "}
+                <span className="inline-block">👋</span>
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.45, duration: 0.4 }}
+            >
+              <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
+                Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '
+                <span className="text-[hsl(0,0%,95%)]">?</span>' to see
+                available commands.
+              </p>
+            </motion.div>
 
             {/* Command History */}
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {history.map((item, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-2 sm:mb-3"
+                  initial={{ opacity: 0, y: 10, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: "auto" }}
+                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: "easeOut",
+                  }}
+                  className="mb-2 sm:mb-3 overflow-hidden"
                 >
                   <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                     <span className="text-[hsl(142,70%,55%)]">dev@karan</span>
                     <span className="text-[hsl(0,0%,50%)]">~</span>
                     <span className="text-[hsl(0,0%,50%)]">$</span>
-                    <span className="text-[hsl(0,0%,95%)]">{item.command}</span>
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-[hsl(0,0%,95%)]"
+                    >
+                      {item.command}
+                    </motion.span>
                   </div>
-                  <div className="mt-1 text-[hsl(0,0%,70%)]">
-                    {item.output.map((line, lineIndex) => (
-                      <div
-                        key={lineIndex}
-                        className="whitespace-pre overflow-x-auto"
-                      >
-                        {line || "\u00A0"}
-                      </div>
-                    ))}
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1, duration: 0.3 }}
+                    className="mt-1 text-[hsl(0,0%,70%)]"
+                  >
+                    <AnimatePresence>
+                      {item.output.map((line, lineIndex) => (
+                        <motion.div
+                          key={lineIndex}
+                          initial={{ opacity: 0, x: -5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -5 }}
+                          transition={{
+                            delay: lineIndex * 0.05,
+                            duration: 0.2,
+                          }}
+                          className="whitespace-pre overflow-x-auto"
+                        >
+                          {line || "\u00A0"}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
                 </motion.div>
               ))}
             </AnimatePresence>
 
             {/* Current Input Line */}
-            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+              className="flex items-center gap-1 sm:gap-2 flex-wrap"
+            >
               <span className="text-[hsl(142,70%,55%)]">dev@karan:</span>
               <span className="text-[hsl(0,0%,50%)]">~</span>
               <span className="text-[hsl(0,0%,50%)]">$</span>
@@ -380,13 +453,20 @@ const PortfolioCLI = ({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)]"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all"
                 spellCheck={false}
                 autoComplete="off"
               />
-              <span className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)] animate-pulse" />
-            </div>
-          </div>
+              <motion.span
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)]"
+              />
+            </motion.div>
+          </motion.div>
         </motion.div>
       </DialogContent>
     </Dialog>
@@ -402,9 +482,10 @@ export const FixedTerminalButton = () => {
     <>
       <motion.button
         onClick={() => setOpen(true)}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        className={`fixed z-50 bg-[hsl(0,0%,12%)] border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-all ${
+        whileHover={{ scale: 1.15, rotateZ: 5 }}
+        whileTap={{ scale: 0.9 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        className={`fixed z-50 bg-[hsl(0,0%,12%)] border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-all overflow-hidden ${
           isMinimized
             ? "px-3 py-2 rounded-lg flex items-center gap-2"
             : "p-3 rounded-full"
@@ -419,13 +500,18 @@ export const FixedTerminalButton = () => {
         }
         aria-label={isMinimized ? "Restore Terminal" : "Open Terminal"}
       >
-        <Terminal size={20} className="text-[hsl(175,100%,50%)]" />
+        <motion.div
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <Terminal size={20} className="text-[hsl(175,100%,50%)]" />
+        </motion.div>
         {isMinimized && (
           <motion.span
             initial={{ opacity: 0, width: 0 }}
             animate={{ opacity: 1, width: "auto" }}
             exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3, type: "spring" }}
             className="text-xs text-[hsl(0,0%,70%)] whitespace-nowrap"
           >
             dev@karan
