@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AnimatePresence } from "framer-motion";
 import CommandPalette from "./components/CommandPalette";
+import { FixedTerminalButton } from "./components/PortfolioCLI";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import Resume from "./pages/Resume";
@@ -44,6 +45,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <CommandPalette />
+          <FixedTerminalButton />
           <AnimatedRoutes />
         </BrowserRouter>
       </TooltipProvider>
