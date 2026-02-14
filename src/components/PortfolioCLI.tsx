@@ -477,6 +477,20 @@ const PortfolioCLI = ({
 export const FixedTerminalButton = () => {
   const [open, setOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const isNearBottom = scrollTop + windowHeight >= documentHeight - 100;
+      setIsAtBottom(isNearBottom);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <>
@@ -491,21 +505,19 @@ export const FixedTerminalButton = () => {
             : "p-3 rounded-full"
         }`}
         style={{
-          bottom: "24px",
-          right: "24px",
+          bottom: isAtBottom ? "84px" : "20px",
+          right: "20px",
           fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+          transition: "bottom 0.3s ease-out",
         }}
         title={
           isMinimized ? "Restore Terminal" : "Open Terminal (Portfolio CLI)"
         }
         aria-label={isMinimized ? "Restore Terminal" : "Open Terminal"}
       >
-        <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
+        <div>
           <Terminal size={20} className="text-[hsl(175,100%,50%)]" />
-        </motion.div>
+        </div>
         {isMinimized && (
           <motion.span
             initial={{ opacity: 0, width: 0 }}
