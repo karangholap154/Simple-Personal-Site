@@ -5,14 +5,27 @@ import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import LazyImage from "@/components/LazyImage";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Camera, X, ChevronLeft, ChevronRight, Share2, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Camera,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  Download,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 // Dynamically import all images from the gallery folder
 const galleryImages = import.meta.glob<{ default: string }>(
   "@/assets/gallery/*.(jpg|jpeg|png|webp|gif)",
-  { eager: true }
+  { eager: true },
 );
 
 const Gallery = () => {
@@ -39,7 +52,8 @@ const Gallery = () => {
 
   const goToPrevious = useCallback(() => {
     if (selectedIndex !== null) {
-      const newIndex = selectedIndex === 0 ? images.length - 1 : selectedIndex - 1;
+      const newIndex =
+        selectedIndex === 0 ? images.length - 1 : selectedIndex - 1;
       setSelectedIndex(newIndex);
       setSearchParams({ photo: images[newIndex].name });
     }
@@ -47,7 +61,8 @@ const Gallery = () => {
 
   const goToNext = useCallback(() => {
     if (selectedIndex !== null) {
-      const newIndex = selectedIndex === images.length - 1 ? 0 : selectedIndex + 1;
+      const newIndex =
+        selectedIndex === images.length - 1 ? 0 : selectedIndex + 1;
       setSelectedIndex(newIndex);
       setSearchParams({ photo: images[newIndex].name });
     }
@@ -102,7 +117,7 @@ const Gallery = () => {
 
   const handleTouchEnd = () => {
     if (touchStartX.current === null || touchEndX.current === null) return;
-    
+
     const deltaX = touchStartX.current - touchEndX.current;
     const minSwipeDistance = 50;
 
@@ -154,12 +169,93 @@ const Gallery = () => {
               <h1 className="text-2xl font-bold mb-4">Casual Photography</h1>
               <p className="text-muted-foreground leading-relaxed">
                 When I’m not developing, I enjoy capturing casual photography
-                with my <strong>Nothing Phone 3a</strong>, there’s something
-                uniquely rewarding about slowing down and preserving everyday
-                moments.
+                with my{" "}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                      <Badge
+                        variant="outline"
+                        className="hover:bg-primary/10 transition-colors text-sm px-2 py-1"
+                      >
+                        Nothing Phone 3a
+                      </Badge>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-sm flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Camera Specs (TrueLens Engine 3.0)
+                      </h3>
+
+                      <div className="space-y-3 text-xs">
+                        {/* Wide Camera */}
+                        <div className="space-y-1 pb-2 border-b border-border/50">
+                          <h4 className="font-semibold uppercase text-muted-foreground">
+                            Wide-Angle
+                          </h4>
+                          <div className="flex justify-between">
+                            <span>50 MP</span>
+                            <span className="text-muted-foreground">
+                              Samsung GN9
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>24mm</span>
+                            <span className="text-muted-foreground">
+                              f/1.88
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground">OIS + EIS</div>
+                        </div>
+
+                        {/* Telephoto Camera */}
+                        <div className="space-y-1 pb-2 border-b border-border/50">
+                          <h4 className="font-semibold uppercase text-muted-foreground">
+                            Telephoto
+                          </h4>
+                          <div className="flex justify-between">
+                            <span>50 MP</span>
+                            <span className="text-muted-foreground">
+                              Samsung J95
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>50mm</span>
+                            <span className="text-muted-foreground">f/2.0</span>
+                          </div>
+                          <div className="text-muted-foreground">
+                            2x Optical / 30x Digital
+                          </div>
+                        </div>
+
+                        {/* Ultra Wide Camera */}
+                        <div className="space-y-1">
+                          <h4 className="font-semibold uppercase text-muted-foreground">
+                            Ultra-Wide
+                          </h4>
+                          <div className="flex justify-between">
+                            <span>8 MP</span>
+                            <span className="text-muted-foreground">
+                              Sony IMX 366
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>15mm</span>
+                            <span className="text-muted-foreground">f/2.2</span>
+                          </div>
+                          <div className="text-muted-foreground">
+                            120° FOV / EIS
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                , there's something uniquely rewarding about slowing down and
+                preserving everyday moments.
               </p>
             </div>
-
             {images.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {images.map((image, index) => (
