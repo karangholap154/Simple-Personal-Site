@@ -257,16 +257,17 @@ const Gallery = () => {
               </p>
             </div>
             {images.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
                 {images.map((image, index) => (
-                  <LazyImage
-                    key={index}
-                    src={image.src}
-                    alt={image.name}
-                    containerClassName="aspect-square rounded-lg bg-muted cursor-pointer"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    onClick={() => openLightbox(index)}
-                  />
+                  <div key={index} className="break-inside-avoid mb-4">
+                    <LazyImage
+                      src={image.src}
+                      alt={image.name}
+                      containerClassName="rounded-lg bg-muted cursor-pointer min-h-[120px]"
+                      className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
+                      onClick={() => openLightbox(index)}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
