@@ -2,7 +2,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { ArrowUpRight, Globe, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
@@ -279,6 +279,51 @@ const Projects = () => {
       "Selected web and mobile projects by Karan Gholap, with stack details, project outcomes, and live demos.",
     path: "/projects",
   });
+
+  useEffect(() => {
+    try {
+      const projects = [...webProjects, ...mobileApps];
+      const itemList = projects.map((p, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: p.link || `${window.location.origin}/projects`,
+        item: {
+          "@type": "CreativeWork",
+          name: p.title,
+          description: p.description,
+        },
+      }));
+
+      const ld = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: "Projects | Karan Gholap",
+        description:
+          "Selected web and mobile projects by Karan Gholap, with stack details and outcomes.",
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: itemList,
+        },
+      };
+
+      const id = "ld-json-projects";
+      let script = document.getElementById(id) as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement("script");
+        script.type = "application/ld+json";
+        script.id = id;
+        document.head.appendChild(script);
+      }
+      script.text = JSON.stringify(ld);
+
+      return () => {
+        const s = document.getElementById(id);
+        if (s) s.remove();
+      };
+    } catch (err) {
+      // ignore structured data injection errors
+    }
+  }, []);
 
   const sectionConfig = {
     web: {

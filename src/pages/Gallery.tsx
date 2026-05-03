@@ -53,10 +53,10 @@ const Gallery = () => {
     setSearchParams({ photo: images[index].name });
   };
 
-  const closeLightbox = () => {
+  const closeLightbox = useCallback(() => {
     setSelectedIndex(null);
     setSearchParams({});
-  };
+  }, [setSearchParams]);
 
   const goToPrevious = useCallback(() => {
     if (selectedIndex !== null) {
@@ -152,7 +152,7 @@ const Gallery = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedIndex, goToPrevious, goToNext]);
+  }, [selectedIndex, goToPrevious, goToNext, closeLightbox]);
 
   // Prevent body scroll when lightbox is open
   useEffect(() => {

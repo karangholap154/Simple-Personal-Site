@@ -1,6 +1,7 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
+import { useEffect } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Resume = () => {
@@ -10,6 +11,39 @@ const Resume = () => {
       "Resume of Karan Gholap, covering education, technical experience, and certifications in full-stack software development.",
     path: "/resume",
   });
+
+  useEffect(() => {
+    const ld = {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: "Karan Gholap",
+      url: `${window.location.origin}/resume`,
+      jobTitle: "Software Developer",
+      worksFor: { "@type": "Organization", name: "CandorWorks" },
+      sameAs: [
+        "https://x.com/TheKaranGholap",
+        "https://github.com/karangholap154",
+        "https://linkedin.com/in/karangholap",
+      ],
+      description:
+        "Resume of Karan Gholap, software developer experienced in React, Node.js, and TypeScript.",
+    };
+
+    const id = "ld-json-resume";
+    let script = document.getElementById(id) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement("script");
+      script.type = "application/ld+json";
+      script.id = id;
+      document.head.appendChild(script);
+    }
+    script.text = JSON.stringify(ld);
+
+    return () => {
+      const s = document.getElementById(id);
+      if (s) s.remove();
+    };
+  }, []);
 
   return (
     <PageTransition>
