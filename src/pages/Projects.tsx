@@ -1,9 +1,10 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Globe, Smartphone } from "lucide-react";
+import { useState } from "react";
 
-const projects = [
+const webProjects = [
   {
     title: "Private Academy Engineering – Smart Study Platform",
     description:
@@ -123,7 +124,111 @@ const projects = [
   },
 ];
 
+const mobileApps = [
+  {
+    title: "Private Academy Mobile App - Study Material Provider",
+    description:
+      "A mobile app that provides engineering students with structured study materials and exam resources for efficient learning on the go.",
+    tech: ["React Native", "Expo", "TypeScript", "Supabase"],
+    link: "https://app.privateacademy.in/",
+  },
+];
+
+type ProjectItem = {
+  title: string;
+  description: string;
+  tech: string[];
+  link?: string;
+};
+
+type ProjectsSectionProps = {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  projects: ProjectItem[];
+};
+
+const ProjectsSection = ({
+  title,
+  description,
+  icon,
+  projects,
+}: ProjectsSectionProps) => {
+  return (
+    <section className="mb-10">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-muted-foreground">{icon}</span>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      </div>
+      <p className="text-sm text-muted-foreground mb-5">{description}</p>
+
+      <div className="space-y-6">
+        {projects.map((project) => (
+          <div
+            key={project.title}
+            className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="font-semibold text-foreground">{project.title}</h3>
+              <div className="flex gap-3">
+                {project.link ? (
+                  <a
+                    href={project.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Live Demo"
+                  >
+                    <ArrowUpRight size={18} />
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded">
+                    Coming soon
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {project.description}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {project.tech.map((t) => (
+                <span
+                  key={t}
+                  className="text-xs px-2 py-1 bg-background rounded text-muted-foreground"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
 const Projects = () => {
+  const [activeView, setActiveView] = useState<"web" | "mobile">("web");
+
+  const sectionConfig = {
+    web: {
+      title: "Websites & Web Applications",
+      description: "All your current live projects are listed here as requested.",
+      icon: <Globe size={18} />,
+      projects: webProjects,
+    },
+    mobile: {
+      title: "Mobile Applications",
+      description:
+        "A dedicated section for mobile apps with a starter placeholder project.",
+      icon: <Smartphone size={18} />,
+      projects: mobileApps,
+    },
+  };
+
+  const currentSection = sectionConfig[activeView];
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background">
@@ -133,50 +238,45 @@ const Projects = () => {
           <section className="py-8">
             <h1 className="text-2xl font-semibold mb-4">Projects</h1>
             <p className="text-muted-foreground mb-8">
-              A collection of projects I've built, from productivity tools to
-              full-stack applications.
+              A categorized collection of my work across web and mobile
+              development.
             </p>
 
-            <div className="space-y-6">
-              {projects.map((project) => (
-                <div
-                  key={project.title}
-                  className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h2 className="font-semibold text-foreground">
-                      {project.title}
-                    </h2>
-                    <div className="flex gap-3">
-                      {project.link && (
-                        <a
-                          href={project.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label="Live Demo"
-                        >
-                          <ArrowUpRight size={18} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {project.description}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {project.tech.map((t) => (
-                      <span
-                        key={t}
-                        className="text-xs px-2 py-1 bg-background rounded text-muted-foreground"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="inline-flex rounded-lg bg-secondary/60 p-1 mb-8">
+              <button
+                type="button"
+                onClick={() => setActiveView("web")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors ${
+                  activeView === "web"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                aria-pressed={activeView === "web"}
+              >
+                <Globe size={16} />
+                Websites
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView("mobile")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm transition-colors ${
+                  activeView === "mobile"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                aria-pressed={activeView === "mobile"}
+              >
+                <Smartphone size={16} />
+                Mobile Apps
+              </button>
             </div>
+
+            <ProjectsSection
+              title={currentSection.title}
+              description={currentSection.description}
+              icon={currentSection.icon}
+              projects={currentSection.projects}
+            />
           </section>
 
           <Footer />
