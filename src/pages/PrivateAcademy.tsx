@@ -2,8 +2,16 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { ExternalLink, Youtube, Instagram, Mail, BookOpen, Users, Code, GraduationCap, Target, Rocket, Linkedin, Twitter } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const PrivateAcademy = () => {
+  usePageMeta({
+    title: "Private Academy Engineering",
+    description:
+      "Overview of Private Academy Engineering, an EdTech platform founded by Karan Gholap for Mumbai University engineering students.",
+    path: "/private-academy",
+  });
+
   const branches = [
     "Computer Engineering",
     "Information Technology",

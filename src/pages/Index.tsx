@@ -6,9 +6,17 @@ import SkillsSection from "@/components/SkillsSection";
 import ProjectsPreview from "@/components/ProjectsPreview";
 import PageTransition from "@/components/PageTransition";
 import ScrollReveal from "@/components/ScrollReveal";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import profileImage from "@/assets/profile.png";
 
 const Index = () => {
+  usePageMeta({
+    title: "Software Developer Portfolio",
+    description:
+      "Software developer portfolio of Karan Gholap featuring full-stack projects, engineering experience, and contact details.",
+    path: "/",
+  });
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background">

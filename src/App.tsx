@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,14 +8,15 @@ import { ThemeProvider } from "next-themes";
 import { AnimatePresence } from "framer-motion";
 import CommandPalette from "./components/CommandPalette";
 import { FixedTerminalButton } from "./components/PortfolioCLI";
-import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import Resume from "./pages/Resume";
-import Contact from "./pages/Contact";
-import PrivateAcademy from "./pages/PrivateAcademy";
-import Support from "./pages/Support";
-import Gallery from "./pages/Gallery";
-import NotFound from "./pages/NotFound";
+
+const Index = lazy(() => import("./pages/Index"));
+const Projects = lazy(() => import("./pages/Projects"));
+const Resume = lazy(() => import("./pages/Resume"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PrivateAcademy = lazy(() => import("./pages/PrivateAcademy"));
+const Support = lazy(() => import("./pages/Support"));
+const Gallery = lazy(() => import("./pages/Gallery"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -37,6 +39,14 @@ const AnimatedRoutes = () => {
 
 const queryClient = new QueryClient();
 
+const PageLoader = () => (
+  <div className="min-h-screen bg-background text-foreground">
+    <div className="max-w-2xl mx-auto px-6 py-20">
+      <p className="text-sm text-muted-foreground">Loading page...</p>
+    </div>
+  </div>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
@@ -46,7 +56,9 @@ const App = () => (
         <BrowserRouter>
           <CommandPalette />
           <FixedTerminalButton />
-          <AnimatedRoutes />
+          <Suspense fallback={<PageLoader />}>
+            <AnimatedRoutes />
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

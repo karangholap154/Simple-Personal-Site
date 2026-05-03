@@ -2,6 +2,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { Mail, Github, Linkedin, Instagram, ExternalLink } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const socialLinks = [
   { name: "GitHub", url: "https://github.com/karangholap154", icon: Github },
@@ -21,6 +22,13 @@ const otherLinks = [
 ];
 
 const Contact = () => {
+  usePageMeta({
+    title: "Contact",
+    description:
+      "Get in touch with Karan Gholap for software development opportunities, collaborations, and freelance projects.",
+    path: "/contact",
+  });
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background">

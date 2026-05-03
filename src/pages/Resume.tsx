@@ -1,8 +1,16 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Resume = () => {
+  usePageMeta({
+    title: "Resume",
+    description:
+      "Resume of Karan Gholap, covering education, technical experience, and certifications in full-stack software development.",
+    path: "/resume",
+  });
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background">

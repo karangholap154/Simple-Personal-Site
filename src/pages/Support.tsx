@@ -2,8 +2,16 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { Coffee } from "lucide-react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Support = () => {
+  usePageMeta({
+    title: "Support My Work",
+    description:
+      "Support Karan Gholap's open work and developer content through Buy Me a Coffee.",
+    path: "/support",
+  });
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background text-foreground">

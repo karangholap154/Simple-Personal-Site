@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 // Dynamically import all images from the gallery folder
 const galleryImages = import.meta.glob<{ default: string }>(
@@ -29,6 +30,13 @@ const galleryImages = import.meta.glob<{ default: string }>(
 );
 
 const Gallery = () => {
+  usePageMeta({
+    title: "Photography Gallery",
+    description:
+      "Casual photography gallery by Karan Gholap, featuring mobile-shot moments and visual snapshots.",
+    path: "/gallery",
+  });
+
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
