@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { supabase } from "@/lib/supabase";
+import { useTheme } from "next-themes";
 
 const GRID_W = 20;
 const GRID_H = 12;
@@ -86,21 +88,27 @@ const ASCII_NAME = `
 const helpList = [
   "Available commands:",
   "",
-  "  about      - Learn about me",
-  "  skills     - View my technical skills",
-  "  projects   - See my featured projects",
-  "  contact    - Get my contact info",
-  "  social     - View my social links",
-  "  resume     - Download my resume",
-  "  matrix     - Enter the Matrix",
-  "  joke       - Random dev joke",
-  "  flip       - Flip a table",
-  "  whoami     - Who are you?",
-  "  date       - Current date & time",
-  "  echo [msg] - Echo a message back",
-  "  snake      - Play Snake! 🐍",
-  "  clear      - Clear the terminal",
-  "  help       - Show this help message",
+  "  about                  - Learn about me",
+  "  skills                 - View my technical skills",
+  "  skills search [term]   - Search for a specific skill",
+  "  projects               - See my featured projects",
+  "  projects filter [type] - Filter projects by 'web' or 'mobile'",
+  "  contact                - Get my contact info",
+  "  social                 - View my social links",
+  "  resume                 - Download my resume",
+  "  theme [light|dark]     - Change website theme",
+  "  matrix                 - Enter the Matrix",
+  "  joke                   - Random dev joke",
+  "  flip                   - Flip a table",
+  "  whoami                 - Who are you?",
+  "  date                   - Current date & time",
+  "  echo [msg]             - Echo a message back",
+  "  snake                  - Play Snake! 🐍",
+  "  sudo / login           - Admin login flow",
+  "  logout                 - Sign out from admin session",
+  "  sudo messages          - View recent contact submissions (admin only)",
+  "  clear                  - Clear the terminal",
+  "  help                   - Show this help message",
 ];
 
 const commands: Record<string, string | string[]> = {
@@ -187,6 +195,24 @@ const PortfolioCLI = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const dialogContentRef = useRef<HTMLDivElement>(null);
+
+  const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
+  const [authEmail, setAuthEmail] = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { setTheme } = useTheme();
+
+  // Listen to Supabase auth state changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const [snakeActive, setSnakeActive] = useState(false);
   const [snake, setSnake] = useState<Pos[]>([{ x: 10, y: 6 }]);
@@ -287,8 +313,49 @@ const PortfolioCLI = ({
     }
   }, [open]);
 
-  const handleCommand = (cmd: string) => {
-    const trimmedCmd = cmd.trim().toLowerCase();
+  const handleCommand = async (cmd: string) => {
+    const trimmedInput = cmd.trim();
+
+    if (authState === "awaiting_email") {
+      if (!trimmedInput) return;
+      setAuthEmail(trimmedInput);
+      setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: [] }]);
+      setAuthState("awaiting_password");
+      return;
+    }
+
+    if (authState === "awaiting_password") {
+      setHistory((prev) => [...prev, { command: "Password: " + "•".repeat(trimmedInput.length), output: ["Connecting to Supabase auth..."] }]);
+      setAuthState("authenticating");
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: trimmedInput
+        });
+        if (error) throw error;
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: "",
+            output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""]
+          }
+        ]);
+      } catch (err: any) {
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: "",
+            output: ["", `  🔴 Access Denied: ${err.message}`, ""]
+          }
+        ]);
+      } finally {
+        setAuthState("idle");
+        setAuthEmail("");
+      }
+      return;
+    }
+
+    const trimmedCmd = trimmedInput.toLowerCase();
     if (!trimmedCmd) return;
 
     setCommandHistory((prev) => [...prev, trimmedCmd]);
@@ -325,8 +392,12 @@ const PortfolioCLI = ({
       setHistory((prev) => [...prev, { command: cmd, output: flipTable }]);
       return;
     }
-    if (trimmedCmd === "whoami") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  You are a visitor on Karan's portfolio. Welcome! 🎉", ""] }]);
+    if (trimmedCmd === "whoami" || trimmedCmd === "sudo whoami") {
+      if (currentUser) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: admin`, `  Email: ${currentUser.email}`, `  Role: authenticated`, ""] }]);
+      } else {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: guest`, `  Role: anonymous`, ""] }]);
+      }
       return;
     }
     if (trimmedCmd === "date") {
@@ -339,6 +410,141 @@ const PortfolioCLI = ({
       return;
     }
 
+    // New Interactive Commands
+    if (trimmedCmd === "sudo" || trimmedCmd === "login" || trimmedCmd === "admin") {
+      if (currentUser) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Already authenticated as: ${currentUser.email}`, ""] }]);
+        return;
+      }
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Starting Admin Authentication Flow...", "  Press Escape at any time to cancel.", ""] }]);
+      setAuthState("awaiting_email");
+      return;
+    }
+
+    if (trimmedCmd === "logout") {
+      if (!currentUser) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Already logged out.", ""] }]);
+        return;
+      }
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Logging out..."] }]);
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        setHistory((prev) => [...prev, { command: "", output: ["", "  Logged out successfully. Goodbye!", ""] }]);
+      } catch (err: any) {
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error during signout: ${err.message}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd === "sudo messages" || trimmedCmd === "messages") {
+      if (!currentUser) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Permission Denied: You must be logged in as admin to view messages.", "  Type 'sudo' or 'login' to authenticate.", ""] }]);
+        return;
+      }
+
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Reading contact messages from database..."] }]);
+
+      try {
+        const { data, error } = await supabase
+          .from("contact_messages")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", "  Inbox is empty.", ""] }]);
+        } else {
+          const lines = ["", "  --- RECENT SUBMISSIONS (Last 5) ---", ""];
+          data.forEach((msg, idx) => {
+            lines.push(
+              `  [${idx + 1}] FROM: ${msg.name} <${msg.email}>`,
+              `      SUBJ: ${msg.subject}`,
+              `      DATE: ${new Date(msg.created_at).toLocaleString()}`,
+              `      BODY: "${msg.message.length > 60 ? msg.message.slice(0, 57) + '...' : msg.message}"`,
+              ""
+            );
+          });
+          setHistory((prev) => [...prev, { command: "", output: lines }]);
+        }
+      } catch (err: any) {
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${err.message}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("theme")) {
+      const targetTheme = trimmedCmd.slice(5).trim();
+      if (targetTheme === "light" || targetTheme === "dark") {
+        setTheme(targetTheme);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Theme changed to ${targetTheme} ⚡`, ""] }]);
+      } else {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: theme [light|dark]", ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("skills search ")) {
+      const term = trimmedCmd.slice(14).trim();
+      if (!term) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: skills search [term]", ""] }]);
+        return;
+      }
+      const skillsList = [
+        "React.js", "Next.js", "HTML5", "CSS3", "JavaScript", "TypeScript", "Tailwind CSS", "Bootstrap", "Shadcn UI",
+        "Node.js", "Express.js", "Python", "Flask", "PostgreSQL", "MySQL", "MongoDB", "Supabase",
+        "Git", "GitHub", "Figma", "JIRA", "AWS", "Vercel", "Netlify", "VS Code", "Postman", "WordPress"
+      ];
+      const matches = skillsList.filter(s => s.toLowerCase().includes(term));
+      if (matches.length > 0) {
+        setHistory((prev) => [...prev, { 
+          command: cmd, 
+          output: ["", `  Found matching skills for "${term}":`, "", ...matches.map(m => `    • ${m}`), ""] 
+        }]);
+      } else {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  No matching skills found for "${term}"`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("projects filter ")) {
+      const type = trimmedCmd.slice(16).trim();
+      if (type !== "web" && type !== "mobile") {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: projects filter [web|mobile]", ""] }]);
+        return;
+      }
+
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Fetching ${type} projects from database...`] }]);
+
+      try {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("type", type)
+          .order("order", { ascending: true });
+        
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", `  No ${type} projects found.`, ""] }]);
+        } else {
+          setHistory((prev) => [...prev, { 
+            command: "", 
+            output: [
+              "",
+              ...data.map((p, idx) => `  ${idx + 1}. ${p.title} (${p.role})\n     → ${p.description}`),
+              ""
+            ] 
+          }]);
+        }
+      } catch (err: any) {
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error fetching projects: ${err.message}`, ""] }]);
+      }
+      return;
+    }
+
     const output = commands[trimmedCmd];
     if (output) {
       setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output] }]);
@@ -348,11 +554,22 @@ const PortfolioCLI = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      if (authState !== "idle") {
+        e.preventDefault();
+        setAuthState("idle");
+        setAuthEmail("");
+        setInput("");
+        setHistory((prev) => [...prev, { command: "Cancelled.", output: [""] }]);
+        return;
+      }
+    }
     if (e.key === "Enter") {
       handleCommand(input);
       setInput("");
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      if (authState !== "idle") return;
       if (commandHistory.length > 0) {
         const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex;
         setHistoryIndex(newIndex);
@@ -360,6 +577,7 @@ const PortfolioCLI = ({
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
+      if (authState !== "idle") return;
       if (historyIndex > 0) {
         const newIndex = historyIndex - 1;
         setHistoryIndex(newIndex);
@@ -575,27 +793,44 @@ const PortfolioCLI = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.3 }}
-                className="flex items-center gap-1 sm:gap-2 flex-wrap"
+                className="flex items-center gap-1 sm:gap-2 flex-wrap w-full"
               >
-                <span className="text-[hsl(142,70%,55%)]">dev@karan:</span>
-                <span className="text-[hsl(0,0%,50%)]">~</span>
-                <span className="text-[hsl(0,0%,50%)]">$</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all"
-                  spellCheck={false}
-                  autoComplete="off"
-                />
-                <motion.span
-                  animate={{ opacity: [1, 0.5, 1] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                  className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)]"
-                />
+                {authState === "awaiting_email" ? (
+                  <span className="text-[hsl(200,80%,60%)]">Enter Email:</span>
+                ) : authState === "awaiting_password" ? (
+                  <span className="text-[hsl(200,80%,60%)]">Enter Password:</span>
+                ) : authState === "authenticating" ? (
+                  <span className="text-muted-foreground animate-pulse">Authenticating...</span>
+                ) : (
+                  <>
+                    <span className="text-[hsl(142,70%,55%)]">
+                      {currentUser ? "admin@karan" : "dev@karan"}
+                    </span>
+                    <span className="text-[hsl(0,0%,50%)]">~</span>
+                    <span className="text-[hsl(0,0%,50%)]">{currentUser ? "#" : "$"}</span>
+                  </>
+                )}
+                
+                {authState !== "authenticating" && (
+                  <>
+                    <input
+                      ref={inputRef}
+                      type={authState === "awaiting_password" ? "password" : "text"}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all"
+                      spellCheck={false}
+                      autoComplete="off"
+                    />
+                    <motion.span
+                      animate={{ opacity: [1, 0.5, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)]"
+                    />
+                  </>
+                )}
               </motion.div>
             )}
           </motion.div>
@@ -628,10 +863,10 @@ export const FixedTerminalButton = () => {
         whileHover={{ scale: 1.15, rotateZ: 5 }}
         whileTap={{ scale: 0.9 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
-        className={`fixed z-50 bg-[hsl(0,0%,12%)] border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-all overflow-hidden ${
+        className={`fixed z-50 bg-[hsl(0,0%,12%)] border border-border shadow-xl hover:bg-[hsl(0,0%,18%)] transition-all overflow-hidden hidden md:flex ${
           isMinimized
-            ? "px-3 py-2 rounded-lg flex items-center gap-2"
-            : "p-3 rounded-full"
+            ? "px-3 py-2 rounded-lg items-center gap-2"
+            : "p-3 rounded-full justify-center items-center"
         }`}
         style={{
           bottom: isAtBottom ? "84px" : "20px",
