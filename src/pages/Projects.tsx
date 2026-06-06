@@ -1,198 +1,25 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { ArrowUpRight, Globe, Smartphone } from "lucide-react";
+import { ArrowUpRight, Globe, Smartphone, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const webProjects = [
-  {
-    title: "Private Academy Engineering – Smart Study Platform",
-    description:
-      "A centralized platform providing structured study materials and exam resources to help engineering students learn efficiently.",
-    role: "Founder and Full-Stack Developer",
-    outcomes: [
-      "Built a focused learning workflow for semester-wise preparation.",
-      "Shipped a responsive product experience used across student devices.",
-    ],
-    tech: [
-      "React.js",
-      "Tailwind CSS",
-      "Framer Motion",
-      "TypeScript",
-      "Supabase",
-    ],
-    link: "https://www.privateacademy.in/",
-  },
-  {
-    title: "PrivMate – AI powered study companion",
-    description:
-      "Get instant, accurate answers to any study question. Our AI understands context and provides detailed explanations.",
-    role: "Product and Frontend Developer",
-    outcomes: [
-      "Converted study questions into guided AI-assisted explanations.",
-      "Delivered a lightweight UI optimized for fast question-answer flow.",
-    ],
-    tech: [
-      "React.js",
-      "Tailwind CSS",
-      "ShadCn/ui",
-      "TypeScript",
-      "Supabase",
-      "Gemini API",
-    ],
-    link: "https://chat.privateacademy.in/",
-  },
-  {
-    title: "Submit Private Academy – Student Notes Sharing Platform",
-    description:
-      "A collaborative platform where students can securely upload, discover, and filter authentic, student-made academic notes.",
-    role: "Full-Stack Developer",
-    outcomes: [
-      "Created a structured submission and discovery experience for notes.",
-      "Improved discoverability with filtering-first information architecture.",
-    ],
-    tech: [
-      "React.js",
-      "Tailwind CSS",
-      "ShadCn/ui",
-      "TypeScript",
-      "Supabase",
-      "Gemini API",
-    ],
-    link: "https://submit.privateacademy.in/",
-  },
-  {
-    title: "Bilix – Invoice Generator",
-    description:
-      "A sleek and user-friendly invoice generator with customizable templates and PDF export functionality.",
-    role: "Frontend Engineer",
-    outcomes: [
-      "Reduced manual invoicing effort with fast template-driven workflows.",
-      "Enabled high-quality downloadable invoices for immediate sharing.",
-    ],
-    tech: [
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "ShadCn/ui",
-      "jsPDF",
-      "Supabase",
-    ],
-    link: "https://bilix.vercel.app/",
-  },
-  {
-    title: "Custom Free QR Code Generator",
-    description:
-      "A privacy-first, free tool for creating unlimited, customizable QR codes with logos, colors, and high-quality exports.",
-    role: "Frontend Developer",
-    outcomes: [
-      "Made QR customization accessible with clear, visual controls.",
-      "Maintained client-side generation for privacy-focused usage.",
-    ],
-    tech: [
-      "React.js",
-      "TypeScript",
-      "JavaScript",
-      "Tailwind CSS",
-      "ShadCn/ui",
-      "Framer Motion",
-    ],
-    link: "https://runqr.vercel.app/",
-  },
-  {
-    title: "SmartTools Hub – Utility Tools Platform",
-    description:
-      "A comprehensive collection of web-based productivity tools built with modern technologies and responsive design.",
-    role: "Frontend Engineer",
-    outcomes: [
-      "Consolidated multiple utilities into one unified product hub.",
-      "Delivered a responsive, reusable UI system across tool pages.",
-    ],
-    tech: [
-      "React.js",
-      "TypeScript",
-      "JavaScript",
-      "Tailwind CSS",
-      "Vite",
-      "Framer Motion",
-    ],
-    link: "https://smarttoolshub.vercel.app",
-  },
-  {
-    title: "JSON Schema Builder",
-    description:
-      "A dynamic tool to create and manage JSON schemas with nested fields and real-time preview.",
-    role: "Frontend Developer",
-    outcomes: [
-      "Simplified nested schema authoring with intuitive form controls.",
-      "Added real-time preview for faster validation and iteration.",
-    ],
-    tech: [
-      "React.js",
-      "TypeScript",
-      "JavaScript",
-      "Tailwind CSS",
-      "ShadCn/ui",
-      "JSON Schema",
-    ],
-    link: "https://add-json-schema.vercel.app/",
-  },
-  {
-    title: "Healthcare Appointment Booking",
-    description:
-      "Easy-to-use healthcare appointment booking system with real-time availability and patient management.",
-    role: "Frontend Developer",
-    outcomes: [
-      "Streamlined appointment booking from search to confirmation.",
-      "Improved scheduling clarity with real-time availability indicators.",
-    ],
-    tech: [
-      "React",
-      "TypeScript",
-      "Context API",
-      "Tailwind CSS",
-      "Lucide Icons",
-    ],
-    link: "https://easyhealthbooking.vercel.app",
-  },
-  {
-    title: "CryptoDash - Cryptocurrency Dashboard",
-    description:
-      "A modern cryptocurrency dashboard with live data from the CoinGecko API with comprehensive market insights.",
-    role: "Frontend Developer",
-    outcomes: [
-      "Built live market visualizations for quick portfolio scanning.",
-      "Translated API data into readable, actionable dashboard views.",
-    ],
-    tech: ["React.js", "TypeScript", "Tailwind CSS", "CoinGecko API", "Axios"],
-    link: "https://cryptocurrency-dashboard-lyart.vercel.app/",
-  },
-];
-
-const mobileApps = [
-  {
-    title: "Private Academy Mobile App - Study Material Provider",
-    description:
-      "A mobile app that provides engineering students with structured study materials and exam resources for efficient learning on the go.",
-    role: "React Native Developer",
-    outcomes: [
-      "Extended the study experience from web to mobile-first workflows.",
-      "Enabled quick access to resources during commute and revision.",
-    ],
-    tech: ["React Native", "Expo", "TypeScript", "Supabase"],
-    link: "https://app.privateacademy.in/",
-  },
-];
-
-type ProjectItem = {
+export type ProjectItem = {
+  id?: string;
   title: string;
   description: string;
   role: string;
   outcomes: string[];
   tech: string[];
   link?: string;
+  type: 'web' | 'mobile';
+  featured: boolean;
+  order: number;
 };
 
 type ProjectsSectionProps = {
@@ -200,6 +27,7 @@ type ProjectsSectionProps = {
   description: string;
   icon: React.ReactNode;
   projects: ProjectItem[];
+  isLoading?: boolean;
 };
 
 const ProjectsSection = ({
@@ -207,6 +35,7 @@ const ProjectsSection = ({
   description,
   icon,
   projects,
+  isLoading,
 }: ProjectsSectionProps) => {
   return (
     <section className="mb-10">
@@ -216,8 +45,28 @@ const ProjectsSection = ({
       </div>
       <p className="text-sm text-muted-foreground mb-5">{description}</p>
 
-      <div className="space-y-6">
-        {projects.map((project) => (
+      {isLoading ? (
+        <div className="space-y-6">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="p-5 border border-border bg-secondary/20 rounded-lg space-y-3">
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <div className="flex gap-2 pt-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="text-center py-10 border border-dashed rounded-lg border-border">
+          <p className="text-sm text-muted-foreground">No projects found.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {projects.map((project) => (
           <div
             key={project.title}
             className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
@@ -266,6 +115,7 @@ const ProjectsSection = ({
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 };
@@ -280,10 +130,22 @@ const Projects = () => {
     path: "/projects",
   });
 
+  const { data: allProjects, isLoading, error } = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("order", { ascending: true });
+      if (error) throw error;
+      return data as ProjectItem[];
+    },
+  });
+
   useEffect(() => {
+    if (!allProjects) return;
     try {
-      const projects = [...webProjects, ...mobileApps];
-      const itemList = projects.map((p, i) => ({
+      const itemList = allProjects.map((p, i) => ({
         "@type": "ListItem",
         position: i + 1,
         url: p.link || `${window.location.origin}/projects`,
@@ -323,7 +185,10 @@ const Projects = () => {
     } catch (err) {
       // ignore structured data injection errors
     }
-  }, []);
+  }, [allProjects]);
+
+  const webProjects = allProjects?.filter((p) => p.type === "web") || [];
+  const mobileApps = allProjects?.filter((p) => p.type === "mobile") || [];
 
   const sectionConfig = {
     web: {
@@ -411,12 +276,23 @@ const Projects = () => {
               </button>
             </div>
 
-            <ProjectsSection
-              title={currentSection.title}
-              description={currentSection.description}
-              icon={currentSection.icon}
-              projects={currentSection.projects}
-            />
+            {error ? (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive mb-8">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-sm">Failed to load projects</h3>
+                  <p className="text-xs opacity-90 mt-0.5">Please check your network connection or try again later.</p>
+                </div>
+              </div>
+            ) : (
+              <ProjectsSection
+                title={currentSection.title}
+                description={currentSection.description}
+                icon={currentSection.icon}
+                projects={currentSection.projects}
+                isLoading={isLoading}
+              />
+            )}
 
             <div className="rounded-xl border border-border bg-secondary/20 p-5 mt-8">
               <h2 className="text-base font-semibold mb-2">
