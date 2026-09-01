@@ -96,10 +96,14 @@ const helpList = [
   "  projects filter [type] - Filter projects by 'web' or 'mobile'",
   "  contact                - Get my contact info",
   "  social                 - View my social links",
-  "  resume                 - Download my resume",
+  "  resume                 - Download / open resume page",
   "  cat resume             - Print resume text in terminal",
   "  fetch / neofetch       - Display portfolio system info",
-  "  theme [light|dark]     - Change website theme",
+  "  ls / dir               - List virtual directories & files",
+  "  cd [page]              - Navigate to page (e.g. cd projects)",
+  "  history                - Show command history",
+  "  banner                 - Show ASCII art banner",
+  "  theme [light|dark]     - Check or change website theme",
   "  matrix                 - Enter the Matrix",
   "  joke                   - Random dev joke",
   "  flip                   - Flip a table",
@@ -109,11 +113,11 @@ const helpList = [
   "  snake                  - Play Snake! 🐍",
   "  sudo / login           - Admin login flow",
   "  logout                 - Sign out from admin session",
-  "  sudo messages          - View recent contact submissions (admin only)",
+  "  sudo messages          - View recent contact submissions (admin)",
   "  clear                  - Clear the terminal",
   "  help                   - Show this help message",
   "",
-  "  💡 Tip: Press [Tab] to auto-complete commands!",
+  "  💡 Tip: Press [Tab] or [→] for zsh-style ghost auto-complete!",
 ];
 
 const commands: Record<string, string | string[]> = {
@@ -204,7 +208,23 @@ const PortfolioCLI = ({
   const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
   const [authEmail, setAuthEmail] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  const availableCommands = [
+    "about", "skills", "skills search", "projects", "projects filter",
+    "contact", "social", "resume", "cat resume", "fetch", "neofetch",
+    "ls", "dir", "cd", "history", "banner", "theme", "matrix", "joke",
+    "flip", "whoami", "date", "echo", "snake", "sudo", "login",
+    "logout", "messages", "clear", "help"
+  ];
+
+  const ghostSuggestion = (() => {
+    if (authState !== "idle" || !input.trim()) return "";
+    const q = input.toLowerCase();
+    const match = availableCommands.find((c) => c.startsWith(q) && c !== q);
+    if (!match) return "";
+    return match.slice(q.length);
+  })();
 
   // Listen to Supabase auth state changes
   useEffect(() => {
@@ -531,13 +551,75 @@ const PortfolioCLI = ({
       return;
     }
 
+    if (trimmedCmd === "ls" || trimmedCmd === "dir") {
+      const lsOutput = [
+        "",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 home/",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 projects/",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 resume/",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 contact/",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 gallery/",
+        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 private-academy/",
+        "  -rw-r--r--  1 karan staff 2555 Sep  2 00:59 README.md",
+        "  -rw-r--r--  1 karan staff  408 Sep  2 00:59 resume.pdf",
+        "",
+        "  💡 Tip: Type 'cd [directory]' to navigate or 'cat resume' to view.",
+        "",
+      ];
+      setHistory((prev) => [...prev, { command: cmd, output: lsOutput }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("cd")) {
+      const targetDir = trimmedCmd.slice(2).trim().replace(/^\/+|\/+$/g, "");
+      const validRoutes: Record<string, string> = {
+        home: "/",
+        index: "/",
+        projects: "/projects",
+        resume: "/resume",
+        contact: "/contact",
+        gallery: "/gallery",
+        "private-academy": "/private-academy",
+        support: "/support",
+      };
+      if (targetDir === "" || targetDir === "~" || targetDir === "home") {
+        window.location.href = "/";
+        return;
+      }
+      if (validRoutes[targetDir]) {
+        window.location.href = validRoutes[targetDir];
+        return;
+      }
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  cd: no such directory: ${targetDir}`, ""] }]);
+      return;
+    }
+
+    if (trimmedCmd === "history") {
+      if (commandHistory.length === 0) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  No command history recorded yet.", ""] }]);
+      } else {
+        const histLines = ["", "  --- COMMAND HISTORY ---", ""];
+        commandHistory.forEach((c, idx) => {
+          histLines.push(`  ${(idx + 1).toString().padStart(3, " ")}  ${c}`);
+        });
+        histLines.push("");
+        setHistory((prev) => [...prev, { command: cmd, output: histLines }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd === "banner") {
+      setHistory((prev) => [...prev, { command: cmd, output: [ASCII_NAME] }]);
+      return;
+    }
+
     if (trimmedCmd.startsWith("theme")) {
       const targetTheme = trimmedCmd.slice(5).trim();
       if (targetTheme === "light" || targetTheme === "dark") {
         setTheme(targetTheme);
         setHistory((prev) => [...prev, { command: cmd, output: ["", `  Theme changed to ${targetTheme} ⚡`, ""] }]);
       } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: theme [light|dark]", ""] }]);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Current theme: ${theme || "dark"}. Usage: theme [light|dark]`, ""] }]);
       }
       return;
     }
@@ -611,16 +693,9 @@ const PortfolioCLI = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Tab") {
+    if (e.key === "Tab" || (e.key === "ArrowRight" && ghostSuggestion && inputRef.current?.selectionStart === input.length)) {
       e.preventDefault();
       if (authState !== "idle" || !input.trim()) return;
-
-      const availableCommands = [
-        "about", "skills", "skills search", "projects", "projects filter",
-        "contact", "social", "resume", "cat resume", "fetch", "neofetch",
-        "theme", "matrix", "joke", "flip", "whoami", "date", "echo",
-        "snake", "sudo", "login", "logout", "messages", "clear", "help"
-      ];
 
       const query = input.toLowerCase().trim();
       const matches = availableCommands.filter((c) => c.startsWith(query));
@@ -903,7 +978,7 @@ const PortfolioCLI = ({
                 )}
                 
                 {authState !== "authenticating" && (
-                  <>
+                  <div className="relative flex-1 min-w-[150px] flex items-center">
                     <input
                       ref={inputRef}
                       type={authState === "awaiting_password" ? "password" : "text"}
@@ -911,16 +986,17 @@ const PortfolioCLI = ({
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-[100px] bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all"
+                      className="w-full bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all z-10 font-mono"
                       spellCheck={false}
                       autoComplete="off"
                     />
-                    <motion.span
-                      animate={{ opacity: [1, 0.5, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                      className="w-2 h-4 sm:h-5 bg-[hsl(0,0%,95%)]"
-                    />
-                  </>
+                    {ghostSuggestion && (
+                      <span className="absolute left-0 pointer-events-none text-[hsl(0,0%,45%)] whitespace-pre select-none z-0 font-mono">
+                        <span className="opacity-0">{input}</span>
+                        {ghostSuggestion}
+                      </span>
+                    )}
+                  </div>
                 )}
               </motion.div>
             )}
