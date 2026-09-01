@@ -29,6 +29,15 @@ const galleryImages = import.meta.glob<{ default: string }>(
   { eager: true },
 );
 
+const formatPhotoTitle = (name: string) => {
+  const clean = name.replace(/^[\d_-]+/, "").replace(/[-_]+/g, " ");
+  if (!clean) return "Photo";
+  return clean
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const Gallery = () => {
   usePageMeta({
     title: "Photography Gallery",
@@ -43,10 +52,14 @@ const Gallery = () => {
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
-  const images = Object.entries(galleryImages).map(([path, module]) => ({
-    src: module.default,
-    name: path.split("/").pop()?.split(".")[0] || "Photo",
-  }));
+  const images = Object.entries(galleryImages).map(([path, module]) => {
+    const rawName = path.split("/").pop()?.split(".")[0] || "Photo";
+    return {
+      src: module.default,
+      name: rawName,
+      title: formatPhotoTitle(rawName),
+    };
+  });
 
   const openLightbox = (index: number) => {
     setSelectedIndex(index);
@@ -98,7 +111,7 @@ const Gallery = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Photo: ${images[selectedIndex].name}`,
+          title: `Photo: ${images[selectedIndex].title}`,
           url,
         });
       } catch {
@@ -270,7 +283,7 @@ const Gallery = () => {
                   <div key={index} className="break-inside-avoid mb-4">
                     <LazyImage
                       src={image.src}
-                      alt={image.name}
+                      alt={image.title}
                       containerClassName="rounded-lg bg-muted cursor-pointer min-h-[120px]"
                       className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
                       onClick={() => openLightbox(index)}
@@ -307,7 +320,7 @@ const Gallery = () => {
             <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
               <a
                 href={images[selectedIndex].src}
-                download={`${images[selectedIndex].name}.jpg`}
+                download={`${images[selectedIndex].name}.webp`}
                 onClick={(e) => e.stopPropagation()}
                 className="p-2 text-white/70 hover:text-white transition-colors"
                 aria-label="Download photo"
@@ -362,14 +375,15 @@ const Gallery = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.2 }}
               src={images[selectedIndex].src}
-              alt={images[selectedIndex].name}
-              className="max-h-[90vh] max-w-[90vw] object-contain"
+              alt={images[selectedIndex].title}
+              className="max-h-[85vh] max-w-[90vw] object-contain"
               onClick={(e) => e.stopPropagation()}
             />
 
-            {/* Image counter */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
-              {selectedIndex + 1} / {images.length}
+            {/* Image caption & counter */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center text-white/90 text-sm">
+              <p className="font-medium">{images[selectedIndex].title}</p>
+              <span className="text-xs text-white/60">{selectedIndex + 1} / {images.length}</span>
             </div>
           </motion.div>
         )}

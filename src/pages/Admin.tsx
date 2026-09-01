@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Lock, Mail, Briefcase, GraduationCap, Award, Trash2, Edit, Plus, 
-  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw 
+  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -387,6 +387,81 @@ const Admin = () => {
     await supabase.from("certifications").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["admin-certifications"] });
     queryClient.invalidateQueries({ queryKey: ["certifications"] });
+  };
+
+  // Resume PDF Direct File Uploader
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [activePdfUrl, setActivePdfUrl] = useState<string>("/resume.pdf");
+
+  useQuery({
+    queryKey: ["admin-resume-pdf-url"],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "resume_pdf_url")
+          .maybeSingle();
+        const val = data?.value || "/resume.pdf";
+        setActivePdfUrl(val);
+        return val;
+      } catch {
+        return "/resume.pdf";
+      }
+    },
+  });
+
+  const handleUploadPdf = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPdfFile) {
+      toast({ title: "Please select a PDF file to upload", variant: "destructive" });
+      return;
+    }
+
+    setUploadingPdf(true);
+    try {
+      // 1. Fetch and remove all previous resume files from 'resumes' bucket
+      const { data: existingFiles } = await supabase.storage.from("resumes").list();
+      if (existingFiles && existingFiles.length > 0) {
+        const filesToRemove = existingFiles.map((f) => f.name);
+        await supabase.storage.from("resumes").remove(filesToRemove);
+      }
+
+      // 2. Upload the new resume PDF file
+      const fileName = "Karan_Gholap_Resume.pdf";
+      const { error: uploadError } = await supabase.storage
+        .from("resumes")
+        .upload(fileName, selectedPdfFile, { upsert: true, contentType: "application/pdf" });
+
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}. Make sure 'resumes' storage bucket is created in Supabase.`);
+      }
+
+      // 3. Obtain public URL with cache-busting timestamp
+      const { data: publicUrlData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(fileName);
+
+      const finalUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+      const { error } = await supabase.from("site_settings").upsert({
+        key: "resume_pdf_url",
+        value: finalUrl,
+      });
+      if (error) throw error;
+
+      setActivePdfUrl(finalUrl);
+      setSelectedPdfFile(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-resume-pdf-url"] });
+      queryClient.invalidateQueries({ queryKey: ["resume-pdf-url"] });
+      toast({ title: "Resume updated! Old resume removed from storage." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Upload Failed", description: msg, variant: "destructive" });
+    } finally {
+      setUploadingPdf(false);
+    }
   };
 
   // Render Login page if not signed in
@@ -810,6 +885,55 @@ const Admin = () => {
 
             {/* TAB: RESUME */}
             <TabsContent value="resume" className="space-y-6 outline-none">
+              {/* PDF Resume Upload Only */}
+              <form onSubmit={handleUploadPdf} className="p-5 bg-secondary/30 border border-border rounded-lg space-y-4">
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                      <FileUp className="h-4 w-4 text-primary" /> Upload Resume PDF
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Select a new PDF file from your computer to update your downloadable resume.
+                    </p>
+                  </div>
+                  <Button type="submit" size="sm" disabled={uploadingPdf || !selectedPdfFile} className="flex items-center gap-2">
+                    {uploadingPdf ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload PDF Document
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="pt-1">
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Choose PDF Document (.pdf)</label>
+                  <Input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
+                    className="bg-background cursor-pointer text-xs"
+                  />
+                  {selectedPdfFile && (
+                    <p className="text-[11px] text-primary font-medium mt-1">Selected file: {selectedPdfFile.name}</p>
+                  )}
+                </div>
+
+                {activePdfUrl && (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-2 border-t border-border/50">
+                    <span>Active Published Resume:</span>
+                    <a href={activePdfUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono truncate max-w-md">
+                      {activePdfUrl}
+                    </a>
+                  </div>
+                )}
+              </form>
+
               <Tabs defaultValue="edu" className="space-y-4">
                 <TabsList className="bg-secondary/20 justify-start border border-border/80">
                   <TabsTrigger value="edu" className="flex items-center gap-1 text-xs">

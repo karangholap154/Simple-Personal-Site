@@ -6,7 +6,8 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Download, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type EducationItem = {
   id: string;
@@ -108,6 +109,22 @@ const Resume = () => {
     },
   });
 
+  const { data: resumePdfUrl } = useQuery({
+    queryKey: ["resume-pdf-url"],
+    queryFn: async () => {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "resume_pdf_url")
+          .maybeSingle();
+        return data?.value || "/resume.pdf";
+      } catch {
+        return "/resume.pdf";
+      }
+    },
+  });
+
   const hasError = errorEdu || errorExp || errorCert;
 
   return (
@@ -117,7 +134,22 @@ const Resume = () => {
           <Navigation />
         
           <section className="py-8">
-            <h1 className="text-2xl font-semibold mb-8">Resume</h1>
+            <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+              <h1 className="text-2xl font-semibold">Resume</h1>
+              {resumePdfUrl && (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 border-border hover:bg-secondary transition-colors"
+                >
+                  <a href={resumePdfUrl} target="_blank" rel="noopener noreferrer" download="Karan_Gholap_Resume.pdf">
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                    <span>Download PDF</span>
+                  </a>
+                </Button>
+              )}
+            </div>
 
             {hasError && (
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive mb-8">
