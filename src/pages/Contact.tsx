@@ -43,6 +43,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   subject: z.string().min(3, { message: "Subject must be at least 3 characters." }),
   message: z.string().min(10, { message: "Message must be at least 10 characters." }),
+  bot_check: z.string().optional(),
 });
 
 const Contact = () => {
@@ -63,10 +64,21 @@ const Contact = () => {
       email: "",
       subject: "",
       message: "",
+      bot_check: "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // Honeypot check: If hidden field is filled, silently discard spam submission
+    if (values.bot_check) {
+      toast({
+        title: "Message sent!",
+        description: "Thank you for reaching out. I'll get back to you soon.",
+      });
+      form.reset();
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { error } = await supabase.from("contact_messages").insert([
@@ -86,7 +98,7 @@ const Contact = () => {
       });
 
       form.reset();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error submitting contact message:", error);
       toast({
         title: "Error sending message",
@@ -115,6 +127,13 @@ const Contact = () => {
               <h2 className="text-lg font-semibold mb-4">Send a Message</h2>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="bot_check"
+                    render={({ field }) => (
+                      <input type="text" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" {...field} />
+                    )}
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}

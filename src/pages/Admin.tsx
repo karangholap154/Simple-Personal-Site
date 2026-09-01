@@ -3,6 +3,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { supabase } from "@/lib/supabase";
+import { Session } from "@supabase/supabase-js";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -17,10 +18,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectItem } from "./Projects";
 
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+interface EducationItem {
+  id: string;
+  degree: string;
+  institution: string;
+  duration: string;
+  order: number;
+}
+
+interface ExperienceItem {
+  id: string;
+  role: string;
+  company: string;
+  duration: string;
+  highlights: string[];
+  order: number;
+}
+
+interface CertificationItem {
+  id: string;
+  name: string;
+  order: number;
+}
+
 const Admin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,10 +84,11 @@ const Admin = () => {
       toast({
         title: "Logged in successfully!",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       toast({
         title: "Authentication failed",
-        description: err.message,
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
@@ -228,10 +263,11 @@ const Admin = () => {
       setShowProjectForm(false);
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       toast({
         title: "Failed to save project",
-        description: err.message,
+        description: errorMsg,
         variant: "destructive",
       });
     }
@@ -245,8 +281,9 @@ const Admin = () => {
       toast({ title: "Project deleted." });
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-    } catch (err: any) {
-      toast({ title: "Failed to delete project", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Failed to delete project", description: errorMsg, variant: "destructive" });
     }
   };
 
@@ -271,8 +308,9 @@ const Admin = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-education"] });
       queryClient.invalidateQueries({ queryKey: ["education"] });
       toast({ title: "Education entry saved." });
-    } catch (err: any) {
-      toast({ title: "Error saving education", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Error saving education", description: errorMsg, variant: "destructive" });
     }
   };
 
@@ -305,8 +343,9 @@ const Admin = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-experience"] });
       queryClient.invalidateQueries({ queryKey: ["experience"] });
       toast({ title: "Experience entry saved." });
-    } catch (err: any) {
-      toast({ title: "Error saving experience", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Error saving experience", description: errorMsg, variant: "destructive" });
     }
   };
 
@@ -337,8 +376,9 @@ const Admin = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-certifications"] });
       queryClient.invalidateQueries({ queryKey: ["certifications"] });
       toast({ title: "Certification entry saved." });
-    } catch (err: any) {
-      toast({ title: "Error saving certification", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Error saving certification", description: errorMsg, variant: "destructive" });
     }
   };
 
@@ -455,7 +495,7 @@ const Admin = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages?.map((msg: any) => (
+                  {messages?.map((msg: ContactMessage) => (
                     <div key={msg.id} className="p-5 bg-secondary/30 border border-border rounded-lg space-y-3 relative group">
                       <div className="flex justify-between items-start flex-wrap gap-2">
                         <div>
@@ -565,7 +605,7 @@ const Admin = () => {
                       <label className="text-xs font-semibold text-muted-foreground mb-1 block">Type</label>
                       <select 
                         value={projectForm.type || "web"} 
-                        onChange={(e: any) => setProjectForm({ ...projectForm, type: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setProjectForm({ ...projectForm, type: e.target.value as "web" | "mobile" })}
                         className="bg-background text-foreground w-full border border-border rounded-md px-3 py-2 text-sm outline-none"
                       >
                         <option value="web">Web</option>
@@ -825,7 +865,7 @@ const Admin = () => {
                   )}
 
                   <div className="space-y-2">
-                    {education?.map((item: any) => (
+                    {education?.map((item: EducationItem) => (
                       <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
                         <div>
                           <p className="font-semibold">{item.degree}</p>
@@ -927,7 +967,7 @@ const Admin = () => {
                   )}
 
                   <div className="space-y-2">
-                    {experience?.map((item: any) => (
+                    {experience?.map((item: ExperienceItem) => (
                       <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
                         <div>
                           <p className="font-semibold">{item.role}</p>
@@ -978,7 +1018,7 @@ const Admin = () => {
                   )}
 
                   <div className="space-y-2">
-                    {certifications?.map((item: any) => (
+                    {certifications?.map((item: CertificationItem) => (
                       <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
                         <p className="font-semibold">{item.name}</p>
                         <div className="flex gap-1">

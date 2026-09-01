@@ -15,6 +15,7 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
 
 # Sitemap
 Sitemap: https://karangholap.com/sitemap.xml

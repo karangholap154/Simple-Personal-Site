@@ -4,6 +4,7 @@ import { Terminal, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 import { useTheme } from "next-themes";
 
 const GRID_W = 20;
@@ -198,7 +199,7 @@ const PortfolioCLI = ({
 
   const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
   const [authEmail, setAuthEmail] = useState("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const { setTheme } = useTheme();
 
   // Listen to Supabase auth state changes
@@ -340,12 +341,13 @@ const PortfolioCLI = ({
             output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""]
           }
         ]);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [
           ...prev,
           {
             command: "",
-            output: ["", `  🔴 Access Denied: ${err.message}`, ""]
+            output: ["", `  🔴 Access Denied: ${errorMsg}`, ""]
           }
         ]);
       } finally {
@@ -431,8 +433,9 @@ const PortfolioCLI = ({
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
         setHistory((prev) => [...prev, { command: "", output: ["", "  Logged out successfully. Goodbye!", ""] }]);
-      } catch (err: any) {
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error during signout: ${err.message}`, ""] }]);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error during signout: ${errorMsg}`, ""] }]);
       }
       return;
     }
@@ -469,8 +472,9 @@ const PortfolioCLI = ({
           });
           setHistory((prev) => [...prev, { command: "", output: lines }]);
         }
-      } catch (err: any) {
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${err.message}`, ""] }]);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${errorMsg}`, ""] }]);
       }
       return;
     }
@@ -539,8 +543,9 @@ const PortfolioCLI = ({
             ] 
           }]);
         }
-      } catch (err: any) {
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error fetching projects: ${err.message}`, ""] }]);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error fetching projects: ${errorMsg}`, ""] }]);
       }
       return;
     }
