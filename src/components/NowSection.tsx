@@ -64,36 +64,73 @@ export const NowSection = () => {
     },
   });
 
-  // 2. Fetch Live GitHub Activity
+  // 2. Fetch Live GitHub Activity with multi-endpoint fallback
   const { data: latestCommitActivity, isLoading: loadingGithub } = useQuery({
     queryKey: ["github-latest-activity"],
     queryFn: async () => {
-      const res = await fetch("https://api.github.com/users/karangholap154/events/public?per_page=15");
-      if (!res.ok) throw new Error("Failed to fetch GitHub events");
-      const events: GitHubEvent[] = await res.json();
-      
-      // Filter for recent PushEvents
-      const pushEvents = events.filter((e) => e.type === "PushEvent" && e.payload?.commits?.length > 0);
-      if (pushEvents.length === 0) return null;
+      // Step A: Try user's recent public events
+      try {
+        const res = await fetch("https://api.github.com/users/karangholap154/events/public?per_page=15");
+        if (res.ok) {
+          const events: GitHubEvent[] = await res.json();
+          const pushEvents = events.filter((e) => e.type === "PushEvent" && e.payload?.commits?.length > 0);
+          if (pushEvents.length > 0) {
+            const latestEvent = pushEvents[0];
+            const eventAgeHours = (Date.now() - new Date(latestEvent.created_at).getTime()) / (1000 * 60 * 60);
+            if (eventAgeHours < 24) {
+              const repoName = latestEvent.repo.name.replace(/^karangholap154\//i, "");
+              const commitCount = latestEvent.payload.commits.length;
+              const rawMsg = latestEvent.payload.commits[latestEvent.payload.commits.length - 1]?.message || "";
+              return {
+                repoName,
+                repoUrl: `https://github.com/${latestEvent.repo.name}`,
+                commitCount,
+                message: cleanCommitMessage(rawMsg),
+                relativeTime: formatDistanceToNow(new Date(latestEvent.created_at), { addSuffix: true }),
+                rawTimestamp: latestEvent.created_at,
+              };
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback to direct repo commits API
+      }
 
-      const latestEvent = pushEvents[0];
-      const repoName = latestEvent.repo.name.replace(/^karangholap154\//i, "");
-      const commitCount = latestEvent.payload.commits.length;
-      const rawMsg = latestEvent.payload.commits[latestEvent.payload.commits.length - 1]?.message || "";
-      const cleanedMsg = cleanCommitMessage(rawMsg);
-      const relativeTime = formatDistanceToNow(new Date(latestEvent.created_at), { addSuffix: true });
-      const repoUrl = `https://github.com/${latestEvent.repo.name}`;
+      // Step B: Dynamic Account-Wide Fallback (Finds most recently pushed public repo)
+      try {
+        const userReposRes = await fetch("https://api.github.com/users/karangholap154/repos?sort=pushed&direction=desc&per_page=5");
+        if (userReposRes.ok) {
+          const repos = await userReposRes.json();
+          if (repos && repos.length > 0) {
+            // Get latest pushed repo name
+            const latestRepo = repos[0];
+            const repoName = latestRepo.name;
+            const repoRes = await fetch(`https://api.github.com/repos/karangholap154/${repoName}/commits?per_page=5`);
+            if (repoRes.ok) {
+              const commits = await repoRes.json();
+              if (commits && commits.length > 0) {
+                const latest = commits[0];
+                const rawMsg = latest.commit.message;
+                const dateStr = latest.commit.committer?.date || latest.commit.author?.date;
+                return {
+                  repoName,
+                  repoUrl: `https://github.com/karangholap154/${repoName}`,
+                  commitCount: commits.length,
+                  message: cleanCommitMessage(rawMsg),
+                  relativeTime: formatDistanceToNow(new Date(dateStr), { addSuffix: true }),
+                  rawTimestamp: dateStr,
+                };
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback to null
+      }
 
-      return {
-        repoName,
-        repoUrl,
-        commitCount,
-        message: cleanedMsg,
-        relativeTime,
-        rawTimestamp: latestEvent.created_at,
-      };
+      return null;
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 mins
+    staleTime: 1000 * 60 * 2, // Cache for 2 mins
     retry: 1,
   });
 
@@ -155,29 +192,27 @@ export const NowSection = () => {
                   </div>
                 </div>
               </div>
-            ) : dbStatus?.status_text ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dbStatus.status_text}
-              </p>
             ) : (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Building & refining full-stack web products with React, TypeScript, and Supabase.
-              </p>
-            )}
+              /* Fallback Scenario: Show prefilled Database status & learning/reading pills */
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {dbStatus?.status_text || "Building & refining full-stack web products with React, TypeScript, and Supabase."}
+                </p>
 
-            {/* Extra Info Pills: Currently Learning & Reading */}
-            {(dbStatus?.currently_learning || dbStatus?.currently_reading) && (
-              <div className="flex flex-wrap gap-3 pt-1 text-xs">
-                {dbStatus?.currently_learning && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/60 px-2.5 py-1 rounded-md border border-border/40">
-                    <GraduationCap size={14} className="text-primary" />
-                    <span>Learning: <strong className="text-foreground font-medium">{dbStatus.currently_learning}</strong></span>
-                  </div>
-                )}
-                {dbStatus?.currently_reading && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/60 px-2.5 py-1 rounded-md border border-border/40">
-                    <BookOpen size={14} className="text-primary" />
-                    <span>Reading: <strong className="text-foreground font-medium">{dbStatus.currently_reading}</strong></span>
+                {(dbStatus?.currently_learning || dbStatus?.currently_reading) && (
+                  <div className="flex flex-wrap gap-3 pt-1 text-xs">
+                    {dbStatus?.currently_learning && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/60 px-2.5 py-1 rounded-md border border-border/40">
+                        <GraduationCap size={14} className="text-primary" />
+                        <span>Learning: <strong className="text-foreground font-medium">{dbStatus.currently_learning}</strong></span>
+                      </div>
+                    )}
+                    {dbStatus?.currently_reading && (
+                      <div className="flex items-center gap-1.5 text-muted-foreground bg-secondary/60 px-2.5 py-1 rounded-md border border-border/40">
+                        <BookOpen size={14} className="text-primary" />
+                        <span>Reading: <strong className="text-foreground font-medium">{dbStatus.currently_reading}</strong></span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
