@@ -10,6 +10,8 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import profileImage from "@/assets/profile.png";
 
+import NowSection from "@/components/NowSection";
+
 const Index = () => {
   usePageMeta({
     title: "Software Developer Portfolio",
@@ -43,7 +45,12 @@ const Index = () => {
             </section>
           </ScrollReveal>
 
-          <hr className="border-border my-8" />
+          {/* Now Section */}
+          <ScrollReveal delay={0.05}>
+            <NowSection />
+          </ScrollReveal>
+
+          <hr className="border-border my-6" />
 
           {/* About Section */}
           <ScrollReveal delay={0.1}>

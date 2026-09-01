@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Lock, Mail, Briefcase, GraduationCap, Award, Trash2, Edit, Plus, 
-  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2
+  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2, Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,34 +169,58 @@ const Admin = () => {
     enabled: !!session,
   });
 
-  // Mutations
-  const updateMessageStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("contact_messages")
-        .update({ status })
-        .eq("id", id);
-      if (error) throw error;
+  // Now Status Manager State & Query
+  const [nowForm, setNowForm] = useState({
+    status_text: "",
+    currently_learning: "",
+    currently_reading: "",
+  });
+  const [savingNowStatus, setSavingNowStatus] = useState(false);
+
+  const { data: nowStatusData } = useQuery({
+    queryKey: ["admin-now-status"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_now_status")
+        .select("*")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      if (data) {
+        setNowForm({
+          status_text: data.status_text || "",
+          currently_learning: data.currently_learning || "",
+          currently_reading: data.currently_reading || "",
+        });
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
-      toast({ title: "Message status updated." });
-    },
+    enabled: !!session,
   });
 
-  const deleteMessageMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("contact_messages")
-        .delete()
-        .eq("id", id);
+  const handleSaveNowStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingNowStatus(true);
+    try {
+      const payload = {
+        status_text: nowForm.status_text,
+        currently_learning: nowForm.currently_learning,
+        currently_reading: nowForm.currently_reading,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("site_now_status").insert([payload]);
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
-      toast({ title: "Message deleted." });
-    },
-  });
+      toast({ title: "Now status updated successfully!" });
+      queryClient.invalidateQueries({ queryKey: ["admin-now-status"] });
+      queryClient.invalidateQueries({ queryKey: ["site-now-status"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Failed to update status", description: msg, variant: "destructive" });
+    } finally {
+      setSavingNowStatus(false);
+    }
+  };
 
   // Project Crud States
   const [projectForm, setProjectForm] = useState<Partial<ProjectItem>>({
@@ -545,10 +569,61 @@ const Admin = () => {
               <TabsTrigger value="projects" className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4" /> Projects
               </TabsTrigger>
+              <TabsTrigger value="now" className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-500" /> Now Status
+              </TabsTrigger>
               <TabsTrigger value="resume" className="flex items-center gap-2">
                 <GraduationCap className="h-4 w-4" /> Resume Sections
               </TabsTrigger>
             </TabsList>
+
+            {/* TAB: NOW STATUS */}
+            <TabsContent value="now" className="space-y-4 outline-none">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-emerald-500" /> Live "Now" Status Control
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Set custom status details to display on your homepage. (Automatic GitHub commit activity takes precedence when active).
+              </p>
+
+              <form onSubmit={handleSaveNowStatus} className="p-6 bg-secondary/20 border border-border rounded-lg space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">General Status Statement</label>
+                  <Textarea
+                    placeholder="e.g. Building Private Academy v2 and refining full-stack architecture..."
+                    value={nowForm.status_text}
+                    onChange={(e) => setNowForm({ ...nowForm, status_text: e.target.value })}
+                    required
+                    className="min-h-[90px]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Currently Learning</label>
+                    <Input
+                      placeholder="e.g. Go & Microservices Architecture"
+                      value={nowForm.currently_learning}
+                      onChange={(e) => setNowForm({ ...nowForm, currently_learning: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Currently Reading</label>
+                    <Input
+                      placeholder="e.g. Designing Data-Intensive Applications"
+                      value={nowForm.currently_reading}
+                      onChange={(e) => setNowForm({ ...nowForm, currently_reading: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full sm:w-auto" disabled={savingNowStatus}>
+                  {savingNowStatus ? "Saving Status..." : "Save Now Status"}
+                </Button>
+              </form>
+            </TabsContent>
 
             {/* TAB: MESSAGES */}
             <TabsContent value="messages" className="space-y-4 outline-none">
