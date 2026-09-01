@@ -9,6 +9,7 @@
     "build": "node scripts/generate-sitemap.cjs && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "optimize:images": "python3 scripts/optimize-images.py",
     "preview": "vite preview"
   },
   "dependencies": {
