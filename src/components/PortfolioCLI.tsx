@@ -97,6 +97,8 @@ const helpList = [
   "  contact                - Get my contact info",
   "  social                 - View my social links",
   "  resume                 - Download my resume",
+  "  cat resume             - Print resume text in terminal",
+  "  fetch / neofetch       - Display portfolio system info",
   "  theme [light|dark]     - Change website theme",
   "  matrix                 - Enter the Matrix",
   "  joke                   - Random dev joke",
@@ -110,6 +112,8 @@ const helpList = [
   "  sudo messages          - View recent contact submissions (admin only)",
   "  clear                  - Clear the terminal",
   "  help                   - Show this help message",
+  "",
+  "  💡 Tip: Press [Tab] to auto-complete commands!",
 ];
 
 const commands: Record<string, string | string[]> = {
@@ -406,6 +410,54 @@ const PortfolioCLI = ({
       setHistory((prev) => [...prev, { command: cmd, output: ["", `  ${new Date().toLocaleString()}`, ""] }]);
       return;
     }
+    if (trimmedCmd === "fetch" || trimmedCmd === "neofetch") {
+      const fetchOutput = [
+        "",
+        "  ⚡ karan@portfolio-os ⚡",
+        "  -----------------------",
+        "  OS       → PortfolioOS v2.0 (Web/Linux)",
+        "  Host     → karangholap.com",
+        "  Kernel   → React 18 + Vite 5 + TypeScript",
+        "  Uptime   → 24/7 (Vercel CDN)",
+        "  Shell    → portfolio-cli v1.0",
+        "  Role     → Software Developer @ CandorWorks",
+        "  Founder  → Private Academy Engineering",
+        "  Location → Pune, India (UTC +5:30) 📍",
+        "  Stack    → React, Node.js, TypeScript, Tailwind, Supabase",
+        "  Theme    → Custom Dark / Light Mode",
+        "",
+      ];
+      setHistory((prev) => [...prev, { command: cmd, output: fetchOutput }]);
+      return;
+    }
+    if (trimmedCmd === "cat resume") {
+      const resumeOutput = [
+        "",
+        "  📄 Karan Gholap — Resume Overview",
+        "  =======================================================",
+        "",
+        "  🎓 EDUCATION:",
+        "    • Bachelor of Engineering (Computer Engineering)",
+        "      University of Mumbai",
+        "",
+        "  💼 EXPERIENCE:",
+        "    • Trainee Developer @ CandorWorks",
+        "      - Full-stack web development & real-world projects.",
+        "    • Founder & Software Developer @ Private Academy Engineering",
+        "      - Designed and deployed EdTech platform for Mumbai Univ. students.",
+        "    • Tech & Business Efficiency Associate @ BURSANA Fashion Tech",
+        "",
+        "  🛠️ CORE SKILLS:",
+        "    • Frontend : React.js, Next.js, TypeScript, Tailwind CSS",
+        "    • Backend  : Node.js, Express.js, Python, REST APIs",
+        "    • Database : PostgreSQL, MongoDB, Supabase",
+        "",
+        "  Type 'resume' or visit /resume to view/download full PDF.",
+        "",
+      ];
+      setHistory((prev) => [...prev, { command: cmd, output: resumeOutput }]);
+      return;
+    }
     if (trimmedCmd.startsWith("echo ")) {
       const msg = cmd.trim().slice(5);
       setHistory((prev) => [...prev, { command: cmd, output: [msg || ""] }]);
@@ -559,6 +611,40 @@ const PortfolioCLI = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (authState !== "idle" || !input.trim()) return;
+
+      const availableCommands = [
+        "about", "skills", "skills search", "projects", "projects filter",
+        "contact", "social", "resume", "cat resume", "fetch", "neofetch",
+        "theme", "matrix", "joke", "flip", "whoami", "date", "echo",
+        "snake", "sudo", "login", "logout", "messages", "clear", "help"
+      ];
+
+      const query = input.toLowerCase().trim();
+      const matches = availableCommands.filter((c) => c.startsWith(query));
+
+      if (matches.length === 1) {
+        setInput(matches[0]);
+      } else if (matches.length > 1) {
+        let commonPrefix = matches[0];
+        for (let i = 1; i < matches.length; i++) {
+          while (!matches[i].startsWith(commonPrefix)) {
+            commonPrefix = commonPrefix.slice(0, -1);
+          }
+        }
+        if (commonPrefix.length > query.length) {
+          setInput(commonPrefix);
+        } else {
+          setHistory((prev) => [
+            ...prev,
+            { command: input, output: ["Matches: " + matches.join("  |  ")] }
+          ]);
+        }
+      }
+      return;
+    }
     if (e.key === "Escape") {
       if (authState !== "idle") {
         e.preventDefault();
