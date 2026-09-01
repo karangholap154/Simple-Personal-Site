@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import CompanyBadge from "@/components/CompanyBadge";
 import GitHubContributions from "@/components/GitHubContributions";
@@ -83,21 +84,21 @@ const Index = () => {
                     Founder and Software Developer
                   </span>{" "}
                   of{" "}
-                  <a href="/private-academy" className="inline-block">
+                  <Link to="/private-academy" className="inline-block">
                     <CompanyBadge
                       name="Private Academy Engineering"
                       icon="📚"
                     />
-                  </a>
+                  </Link>
                   , an educational technology platform for engineering students
                   where I develop and deploy full-stack web applications and
                   manage platform growth.{" "}
-                  <a
-                    href="/private-academy"
+                  <Link
+                    to="/private-academy"
                     className="text-foreground link-underline"
                   >
                     Learn more →
-                  </a>
+                  </Link>
                 </p>
 
                 <p>
@@ -110,9 +111,9 @@ const Index = () => {
                   business efficiency and contributed to cross-functional
                   projects bridging technology and business needs. For more
                   details about my experience, check out my{" "}
-                  <a href="/resume" className="text-foreground link-underline">
+                  <Link to="/resume" className="text-foreground link-underline">
                     resume
-                  </a>
+                  </Link>
                   .
                 </p>
               </div>

@@ -64,7 +64,7 @@ const CommandPalette = () => {
     { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com/in/karangholap" },
     { name: "X (Twitter)", icon: Twitter, href: "https://x.com/TheKaranGholap" },
     { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/thekarangholap" },
-    { name: "Buy Me a Coffee", icon: Coffee, href: "https://buymeacoffee.com" },
+    { name: "Buy Me a Coffee", icon: Coffee, href: "https://buymeacoffee.com/karangholap" },
   ];
 
   return (
