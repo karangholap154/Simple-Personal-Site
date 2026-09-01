@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectItem } from "@/pages/Projects";
+import { slugify } from "@/components/ProjectDrawer";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -86,31 +87,29 @@ const ProjectsPreview = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           {featuredProjects?.map((project) => (
-            <motion.a
-              key={project.title}
-              href={project.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
-              variants={projectVariants}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium text-foreground group-hover:text-foreground/80 flex items-center gap-2">
-                    {project.title}
-                    <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-                  <div className="flex gap-2 mt-3">
-                    {project.tech.map((t) => (
-                      <span key={t} className="text-xs px-2 py-0.5 bg-background rounded text-muted-foreground">
-                        {t}
-                      </span>
-                    ))}
+            <motion.div key={project.title} variants={projectVariants}>
+              <Link
+                to={`/projects?project=${slugify(project.title)}`}
+                className="block p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                      {project.title}
+                      <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
+                    <div className="flex gap-2 mt-3">
+                      {project.tech.map((t) => (
+                        <span key={t} className="text-xs px-2 py-0.5 bg-background rounded text-muted-foreground">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.a>
+              </Link>
+            </motion.div>
           ))}
         </motion.div>
       )}

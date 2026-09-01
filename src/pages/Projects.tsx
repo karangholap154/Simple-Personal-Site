@@ -2,12 +2,13 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { ArrowUpRight, Globe, Smartphone, AlertCircle } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProjectDrawer, slugify } from "@/components/ProjectDrawer";
 
 export type ProjectItem = {
   id?: string;
@@ -28,6 +29,7 @@ type ProjectsSectionProps = {
   icon: React.ReactNode;
   projects: ProjectItem[];
   isLoading?: boolean;
+  onSelectProject: (project: ProjectItem) => void;
 };
 
 const ProjectsSection = ({
@@ -36,6 +38,7 @@ const ProjectsSection = ({
   icon,
   projects,
   isLoading,
+  onSelectProject,
 }: ProjectsSectionProps) => {
   return (
     <section className="mb-10">
@@ -69,18 +72,26 @@ const ProjectsSection = ({
           {projects.map((project) => (
           <div
             key={project.title}
-            className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors"
+            onClick={() => onSelectProject(project)}
+            className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer group"
           >
             <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-foreground">{project.title}</h3>
+              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                {project.title}
+                <span className="text-xs font-normal text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  (View case study)
+                </span>
+              </h3>
               <div className="flex gap-3">
                 {project.link ? (
                   <a
                     href={project.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
                     aria-label={`Open live demo for ${project.title}`}
+                    title="Open live link"
                   >
                     <ArrowUpRight size={18} />
                   </a>
@@ -122,6 +133,9 @@ const ProjectsSection = ({
 
 const Projects = () => {
   const [activeView, setActiveView] = useState<"web" | "mobile">("web");
+  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   usePageMeta({
     title: "Projects",
@@ -186,6 +200,36 @@ const Projects = () => {
       // ignore structured data injection errors
     }
   }, [allProjects]);
+
+  const handleSelectProject = useCallback((project: ProjectItem) => {
+    setSelectedProject(project);
+    setIsDrawerOpen(true);
+    setSearchParams({ project: slugify(project.title) });
+  }, [setSearchParams]);
+
+  const handleDrawerOpenChange = (open: boolean) => {
+    setIsDrawerOpen(open);
+    if (!open) {
+      setSearchParams({});
+    }
+  };
+
+  useEffect(() => {
+    if (!allProjects || allProjects.length === 0) return;
+    const projectParam = searchParams.get("project");
+    if (projectParam) {
+      const matched = allProjects.find(
+        (p) => slugify(p.title) === projectParam.toLowerCase().trim()
+      );
+      if (matched) {
+        setSelectedProject(matched);
+        setIsDrawerOpen(true);
+        if (matched.type !== activeView) {
+          setActiveView(matched.type);
+        }
+      }
+    }
+  }, [allProjects, searchParams, activeView]);
 
   const webProjects = allProjects?.filter((p) => p.type === "web") || [];
   const mobileApps = allProjects?.filter((p) => p.type === "mobile") || [];
@@ -291,6 +335,7 @@ const Projects = () => {
                 icon={currentSection.icon}
                 projects={currentSection.projects}
                 isLoading={isLoading}
+                onSelectProject={handleSelectProject}
               />
             )}
 
@@ -315,6 +360,12 @@ const Projects = () => {
 
           <Footer />
         </div>
+
+        <ProjectDrawer
+          project={selectedProject}
+          open={isDrawerOpen}
+          onOpenChange={handleDrawerOpenChange}
+        />
       </div>
     </PageTransition>
   );
