@@ -8,7 +8,8 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectDrawer, slugify } from "@/components/ProjectDrawer";
+import { ProjectDrawer } from "@/components/ProjectDrawer";
+import { slugify } from "@/lib/utils";
 
 export type ProjectItem = {
   id?: string;

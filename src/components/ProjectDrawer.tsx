@@ -11,15 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Share2, Globe, Smartphone, CheckCircle2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-export const slugify = (text: string) => {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
+import { slugify } from "@/lib/utils";
 
 interface ProjectDrawerProps {
   project: ProjectItem | null;

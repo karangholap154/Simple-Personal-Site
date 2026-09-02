@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectItem } from "@/pages/Projects";
-import { slugify } from "@/components/ProjectDrawer";
+import { slugify } from "@/lib/utils";
 
 const containerVariants = {
   hidden: { opacity: 0 },
