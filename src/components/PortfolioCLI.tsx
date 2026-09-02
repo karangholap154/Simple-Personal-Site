@@ -111,6 +111,7 @@ const helpList = [
   "  date                   - Current date & time",
   "  echo [msg]             - Echo a message back",
   "  snake                  - Play Snake! 🐍",
+  "  send / msg             - Send a message directly to Karan via CLI",
   "  sudo / login           - Admin login flow",
   "  logout                 - Sign out from admin session",
   "  sudo messages          - View recent contact submissions (admin)",
@@ -205,6 +206,10 @@ const PortfolioCLI = ({
   const terminalRef = useRef<HTMLDivElement>(null);
   const dialogContentRef = useRef<HTMLDivElement>(null);
 
+  type SendState = "idle" | "awaiting_name" | "awaiting_email" | "awaiting_subject" | "awaiting_message" | "submitting";
+  const [sendState, setSendState] = useState<SendState>("idle");
+  const [sendForm, setSendForm] = useState({ name: "", email: "", subject: "", message: "" });
+
   const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
   const [authEmail, setAuthEmail] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -214,12 +219,12 @@ const PortfolioCLI = ({
     "about", "skills", "skills search", "projects", "projects filter",
     "contact", "social", "resume", "cat resume", "fetch", "neofetch",
     "ls", "dir", "cd", "history", "banner", "theme", "matrix", "joke",
-    "flip", "whoami", "date", "echo", "snake", "sudo", "login",
-    "logout", "messages", "clear", "help"
+    "flip", "whoami", "date", "echo", "snake", "send", "msg", "contact send",
+    "sudo", "login", "logout", "messages", "clear", "help"
   ];
 
   const ghostSuggestion = (() => {
-    if (authState !== "idle" || !input.trim()) return "";
+    if (authState !== "idle" || sendState !== "idle" || !input.trim()) return "";
     const q = input.toLowerCase();
     const match = availableCommands.find((c) => c.startsWith(q) && c !== q);
     if (!match) return "";
@@ -340,6 +345,100 @@ const PortfolioCLI = ({
 
   const handleCommand = async (cmd: string) => {
     const trimmedInput = cmd.trim();
+
+    if (sendState === "awaiting_name") {
+      if (!trimmedInput) return;
+      setSendForm((prev) => ({ ...prev, name: trimmedInput }));
+      setHistory((prev) => [
+        ...prev,
+        { command: "Name: " + trimmedInput, output: ["", "  Step 2/4: Enter your email address:", ""] }
+      ]);
+      setSendState("awaiting_email");
+      return;
+    }
+
+    if (sendState === "awaiting_email") {
+      if (!trimmedInput) return;
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedInput);
+      if (!isEmailValid) {
+        setHistory((prev) => [
+          ...prev,
+          { command: "Email: " + trimmedInput, output: ["", "  🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):", ""] }
+        ]);
+        return;
+      }
+      setSendForm((prev) => ({ ...prev, email: trimmedInput }));
+      setHistory((prev) => [
+        ...prev,
+        { command: "Email: " + trimmedInput, output: ["", "  Step 3/4: Subject / Topic?", ""] }
+      ]);
+      setSendState("awaiting_subject");
+      return;
+    }
+
+    if (sendState === "awaiting_subject") {
+      if (!trimmedInput) return;
+      setSendForm((prev) => ({ ...prev, subject: trimmedInput }));
+      setHistory((prev) => [
+        ...prev,
+        { command: "Subject: " + trimmedInput, output: ["", "  Step 4/4: Type your message body:", ""] }
+      ]);
+      setSendState("awaiting_message");
+      return;
+    }
+
+    if (sendState === "awaiting_message") {
+      if (!trimmedInput) return;
+      const finalPayload = { ...sendForm, message: trimmedInput };
+      setHistory((prev) => [
+        ...prev,
+        { command: "Message: " + trimmedInput, output: ["", "  Connecting to database & delivering message..."] }
+      ]);
+      setSendState("submitting");
+
+      try {
+        const { error } = await supabase.from("contact_messages").insert([
+          {
+            name: finalPayload.name,
+            email: finalPayload.email,
+            subject: finalPayload.subject,
+            message: finalPayload.message,
+          },
+        ]);
+        if (error) throw error;
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: "",
+            output: [
+              "",
+              "  🟢 Message Sent Successfully!",
+              `  Thank you, ${finalPayload.name}! Your message has been stored.`,
+              `  Karan will review it and get back to you at ${finalPayload.email}.`,
+              "",
+            ],
+          },
+        ]);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: "",
+            output: [
+              "",
+              `  🔴 Error sending message: ${msg}`,
+              "  Please try again or email karangholap@zohomail.in directly.",
+              "",
+            ],
+          },
+        ]);
+      } finally {
+        setSendState("idle");
+        setSendForm({ name: "", email: "", subject: "", message: "" });
+      }
+      return;
+    }
 
     if (authState === "awaiting_email") {
       if (!trimmedInput) return;
@@ -485,6 +584,25 @@ const PortfolioCLI = ({
     }
 
     // New Interactive Commands
+    if (trimmedCmd === "send" || trimmedCmd === "msg" || trimmedCmd === "contact send") {
+      setHistory((prev) => [
+        ...prev,
+        {
+          command: cmd,
+          output: [
+            "",
+            "  📨 Interactive Contact Wizard",
+            "  ===========================================",
+            "  Step 1/4: What is your name?",
+            "  (Press Escape at any time to cancel)",
+            "",
+          ],
+        },
+      ]);
+      setSendState("awaiting_name");
+      return;
+    }
+
     if (trimmedCmd === "sudo" || trimmedCmd === "login" || trimmedCmd === "admin") {
       if (currentUser) {
         setHistory((prev) => [...prev, { command: cmd, output: ["", `  Already authenticated as: ${currentUser.email}`, ""] }]);
@@ -721,6 +839,14 @@ const PortfolioCLI = ({
       return;
     }
     if (e.key === "Escape") {
+      if (sendState !== "idle") {
+        e.preventDefault();
+        setSendState("idle");
+        setSendForm({ name: "", email: "", subject: "", message: "" });
+        setInput("");
+        setHistory((prev) => [...prev, { command: "Cancelled.", output: ["", "  Contact submission cancelled.", ""] }]);
+        return;
+      }
       if (authState !== "idle") {
         e.preventDefault();
         setAuthState("idle");
@@ -961,7 +1087,17 @@ const PortfolioCLI = ({
                 transition={{ delay: 0.5, duration: 0.3 }}
                 className="flex items-center gap-1 sm:gap-2 flex-wrap w-full"
               >
-                {authState === "awaiting_email" ? (
+                {sendState === "awaiting_name" ? (
+                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 1/4 (Your Name):</span>
+                ) : sendState === "awaiting_email" ? (
+                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 2/4 (Your Email):</span>
+                ) : sendState === "awaiting_subject" ? (
+                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 3/4 (Subject):</span>
+                ) : sendState === "awaiting_message" ? (
+                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 4/4 (Message):</span>
+                ) : sendState === "submitting" ? (
+                  <span className="text-muted-foreground animate-pulse">Delivering message...</span>
+                ) : authState === "awaiting_email" ? (
                   <span className="text-[hsl(200,80%,60%)]">Enter Email:</span>
                 ) : authState === "awaiting_password" ? (
                   <span className="text-[hsl(200,80%,60%)]">Enter Password:</span>
@@ -977,7 +1113,7 @@ const PortfolioCLI = ({
                   </>
                 )}
                 
-                {authState !== "authenticating" && (
+                {authState !== "authenticating" && sendState !== "submitting" && (
                   <div className="relative flex-1 min-w-[150px] flex items-center">
                     <input
                       ref={inputRef}
