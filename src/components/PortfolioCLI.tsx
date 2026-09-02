@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, X } from "lucide-react";
+import { Terminal, X, Volume2, VolumeX } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +27,11 @@ import {
   themes,
   VFSNode,
 } from "@/utils/virtualOS";
+import {
+  loadSoundSetting,
+  saveSoundSetting,
+  playKeySound,
+} from "@/utils/audioUtils";
 
 const helpList = [
   "Available Commands (grouped by category):",
@@ -51,6 +56,10 @@ const helpList = [
   "    echo [text] > [file]   - Write text content to a file",
   "    tree                   - Display full virtual filesystem tree",
   "",
+  "  🔊 AUDIO & CUSTOMIZATION",
+  "    sound [on|off|toggle]  - Toggle retro mechanical keypress audio",
+  "    theme set [name]       - Change theme (matrix, dracula, cyberpunk, ubuntu, default)",
+  "",
   "  👤 PORTFOLIO INFO (DATABASE DRIVEN)",
   "    projects               - Fetch all featured projects from database",
   "    projects filter [type] - Filter projects by 'web' or 'mobile'",
@@ -66,8 +75,7 @@ const helpList = [
   "    fetch / neofetch       - Display portfolio system info",
   "    download               - Download resume PDF",
   "",
-  "  ⚡ UTILITIES & CUSTOMIZATION",
-  "    theme set [name]       - Change theme (matrix, dracula, cyberpunk, ubuntu, default)",
+  "  ⚡ UTILITIES & HELPERS",
   "    send                   - Launch interactive message wizard to contact Karan",
   "    time / tz              - Display Pune, India timezone & local time",
   "    calc [expr]            - Calculate a math expression (e.g. calc 25 * 4)",
@@ -91,6 +99,7 @@ const availableCommands = [
   "contact", "social", "resume", "cat", "cat README.md", "cat resume", "fetch", "neofetch",
   "ls", "ls -la", "ls -l", "ls -a", "pwd", "cd", "mkdir", "touch", "rm", "rm -r", "tree", "open", "download",
   "ssh", "ssh guest@karan-server", "exit", "top", "htop", "ping", "df", "df -h", "free", "free -m", "netstat",
+  "sound", "sound on", "sound off", "sound toggle",
   "theme", "theme set matrix", "theme set dracula", "theme set cyberpunk", "theme set ubuntu", "theme set default",
   "time", "tz", "calc", "shortcuts", "whoami", "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help"
 ];
@@ -143,6 +152,7 @@ const readmeOutput = [
   "    • Type 'send' to drop a direct message",
   "    • Type 'download' to save my resume",
   "    • Type 'ssh guest@karan-server' for server mode",
+  "    • Type 'sound on' for mechanical key audio",
   "",
 ];
 
@@ -301,13 +311,14 @@ const PortfolioCLI = ({
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Virtual OS & SSH State
+  // Virtual OS, SSH & Audio State
   const [vfs, setVfs] = useState<VFSNode>(loadVFS);
   const [currentDir, setCurrentDir] = useState<string>("/home/karan");
   const [sshSession, setSshSession] = useState<{ isConnected: boolean; host: string; user: string } | null>(null);
   const [activeView, setActiveView] = useState<"terminal" | "top">("terminal");
   const [themeName, setThemeName] = useState<string>(loadTheme);
   const [topTick, setTopTick] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundSetting);
 
   const theme = themes[themeName] || themes.default;
 
@@ -379,6 +390,15 @@ const PortfolioCLI = ({
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
+
+  const toggleAudio = () => {
+    const nextState = !soundEnabled;
+    setSoundEnabled(nextState);
+    saveSoundSetting(nextState);
+    if (nextState) {
+      playKeySound("key", true);
+    }
+  };
 
   const triggerResumeDownload = async () => {
     setHistory((prev) => [...prev, { command: "download", output: ["", "  📥 Preparing resume download...", ""] }]);
@@ -454,6 +474,7 @@ const PortfolioCLI = ({
       const newPath = resolvePath(currentDir, targetStr);
       const outputLines = formatLsOutput(vfs, currentDir, targetStr);
       if (outputLines.length > 0 && outputLines[0].includes("No such file")) {
+        playKeySound("bell", soundEnabled);
         setHistory((prev) => [...prev, { command: `cd ${targetStr}`, output: ["", `  cd: ${targetStr}: No such file or directory`, ""] }]);
       } else {
         setCurrentDir(newPath);
@@ -462,6 +483,7 @@ const PortfolioCLI = ({
       return;
     }
 
+    playKeySound("bell", soundEnabled);
     setHistory((prev) => [
       ...prev,
       { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Error: target '${targetStr}' not found. Type 'ls' or 'help' to see valid targets.`, ""] }
@@ -490,6 +512,7 @@ const PortfolioCLI = ({
       if (!trimmedInput) return;
       const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedInput);
       if (!isEmailValid) {
+        playKeySound("bell", soundEnabled);
         setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: ["", "  🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):", ""] }]);
         return;
       }
@@ -532,6 +555,7 @@ const PortfolioCLI = ({
           },
         ]);
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error sending message: ${msg}`, "  Please try again or email karangholap@zohomail.in directly.", ""] }]);
       } finally {
@@ -557,6 +581,7 @@ const PortfolioCLI = ({
         if (error) throw error;
         setHistory((prev) => [...prev, { command: "", output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""] }]);
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const errorMsg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Access Denied: ${errorMsg}`, ""] }]);
       } finally {
@@ -577,6 +602,46 @@ const PortfolioCLI = ({
       : currentUser
       ? "admin@karan"
       : "dev@karan";
+
+    // Audio Commands
+    if (trimmedCmd === "sound" || trimmedCmd === "sound status") {
+      setHistory((prev) => [
+        ...prev,
+        {
+          command: cmd,
+          output: [
+            "",
+            `  🔊 Retro Mechanical Audio Feedback: ${soundEnabled ? "ENABLED (ON)" : "DISABLED (OFF)"}`,
+            "  Usage: sound on | sound off | sound toggle",
+            "",
+          ],
+          cwd: currentDir,
+          userPrompt: currentUserPrompt,
+        },
+      ]);
+      return;
+    }
+
+    if (trimmedCmd === "sound on") {
+      setSoundEnabled(true);
+      saveSoundSetting(true);
+      playKeySound("enter", true);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  🔊 Retro Mechanical Audio Feedback ENABLED!", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "sound off") {
+      setSoundEnabled(false);
+      saveSoundSetting(false);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  🔇 Retro Mechanical Audio Feedback MUTED.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "sound toggle") {
+      toggleAudio();
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  🔊 Audio Feedback toggled ${!soundEnabled ? "ON" : "OFF"}.`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
 
     // SSH Execution
     if (trimmedCmd.startsWith("ssh ")) {
@@ -676,6 +741,7 @@ const PortfolioCLI = ({
           saveTheme(tName);
           setHistory((prev) => [...prev, { command: cmd, output: ["", `  🎨 Theme switched to '${tName}'!`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
+          playKeySound("bell", soundEnabled);
           setHistory((prev) => [...prev, { command: cmd, output: ["", `  Error: Theme '${tName}' not found. Type 'theme' to view options.`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
         return;
@@ -712,6 +778,7 @@ const PortfolioCLI = ({
       const dirName = trimmedInput.slice(6).trim();
       const res = executeMkdir(vfs, currentDir, dirName, sshSession ? sshSession.user : "karan");
       if (res.updatedRoot) setVfs(res.updatedRoot);
+      if (!res.success) playKeySound("bell", soundEnabled);
       setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
@@ -720,6 +787,7 @@ const PortfolioCLI = ({
       const fileName = trimmedInput.slice(6).trim();
       const res = executeTouch(vfs, currentDir, fileName, sshSession ? sshSession.user : "karan");
       if (res.updatedRoot) setVfs(res.updatedRoot);
+      if (!res.success) playKeySound("bell", soundEnabled);
       setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
@@ -731,6 +799,7 @@ const PortfolioCLI = ({
 
       const res = executeRm(vfs, currentDir, targetName, isRecursive);
       if (res.updatedRoot) setVfs(res.updatedRoot);
+      if (!res.success) playKeySound("bell", soundEnabled);
       setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
@@ -743,6 +812,7 @@ const PortfolioCLI = ({
         setHistory((prev) => [...prev, { command: cmd, output: resumeTextOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
       } else {
         const lines = executeCat(vfs, currentDir, fileName);
+        if (lines.length > 0 && lines[0].includes("No such file")) playKeySound("bell", soundEnabled);
         setHistory((prev) => [...prev, { command: cmd, output: ["", ...lines, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
@@ -760,6 +830,7 @@ const PortfolioCLI = ({
       if (filePath) {
         const res = executeWriteFile(vfs, currentDir, filePath, rawText, isAppend, sshSession ? sshSession.user : "karan");
         if (res.updatedRoot) setVfs(res.updatedRoot);
+        if (!res.success) playKeySound("bell", soundEnabled);
         setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         return;
       }
@@ -816,6 +887,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching experience: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -845,6 +917,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching education: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -868,6 +941,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching certifications: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -902,6 +976,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching projects: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -968,6 +1043,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: results, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const msg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error searching database: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -1016,7 +1092,8 @@ const PortfolioCLI = ({
         "  -----------------------",
         "  OS       → PortfolioOS v2.5 (Virtual Linux Kernel)",
         "  Host     → karangholap.com",
-        "  Kernel   → React 18 + Vite 5 + Virtual OS Engine",
+        "  Kernel   → React 18 + Vite 5 + Audio Synthesizer",
+        "  Audio    → Mechanical Switch Audio Synthesizer (" + (soundEnabled ? "ON" : "OFF") + ")",
         "  Uptime   → 24/7 (Vercel CDN)",
         "  Shell    → portfolio-cli v2.5 (VFS + SSH + POSIX)",
         "  Role     → Software Developer @ CandorWorks",
@@ -1069,6 +1146,7 @@ const PortfolioCLI = ({
 
     if (trimmedCmd === "sudo messages" || trimmedCmd === "messages") {
       if (!currentUser) {
+        playKeySound("bell", soundEnabled);
         setHistory((prev) => [...prev, { command: cmd, output: ["", "  Permission Denied: You must be logged in as admin to view messages.", "  Type 'sudo' or 'login' to authenticate.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         return;
       }
@@ -1100,6 +1178,7 @@ const PortfolioCLI = ({
           setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
+        playKeySound("bell", soundEnabled);
         const errorMsg = err instanceof Error ? err.message : String(err);
         setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${errorMsg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
@@ -1110,6 +1189,7 @@ const PortfolioCLI = ({
     if (output) {
       setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output], cwd: currentDir, userPrompt: currentUserPrompt }]);
     } else {
+      playKeySound("bell", soundEnabled);
       setHistory((prev) => [...prev, { command: cmd, output: [`Command not found: ${cmd}`, "Type 'help' to see available commands."], cwd: currentDir, userPrompt: currentUserPrompt }]);
     }
   };
@@ -1121,6 +1201,17 @@ const PortfolioCLI = ({
         setActiveView("terminal");
       }
       return;
+    }
+
+    // Audio triggers for mechanical feedback
+    if (e.key === "Enter") {
+      playKeySound("enter", soundEnabled);
+    } else if (e.key === " ") {
+      playKeySound("space", soundEnabled);
+    } else if (e.key === "Backspace") {
+      playKeySound("backspace", soundEnabled);
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      playKeySound("key", soundEnabled);
     }
 
     if (e.key === "Tab" || (e.key === "ArrowRight" && ghostSuggestion && inputRef.current?.selectionStart === input.length)) {
@@ -1142,8 +1233,11 @@ const PortfolioCLI = ({
         if (commonPrefix.length > query.length) {
           setInput(commonPrefix);
         } else {
+          playKeySound("bell", soundEnabled);
           setHistory((prev) => [...prev, { command: input, output: ["Matches: " + matches.join("  |  ")] }]);
         }
+      } else {
+        playKeySound("bell", soundEnabled);
       }
       return;
     }
@@ -1244,8 +1338,8 @@ const PortfolioCLI = ({
           style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
         >
           {/* Terminal Header */}
-          <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b ${theme.header}`}>
-            <div className="flex gap-1.5 sm:gap-2">
+          <div className={`flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b ${theme.header}`}>
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <motion.button
                 onClick={handleClose}
                 whileHover={{ scale: 1.2 }}
@@ -1279,6 +1373,7 @@ const PortfolioCLI = ({
                 </span>
               </motion.button>
             </div>
+
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1291,6 +1386,22 @@ const PortfolioCLI = ({
                   : `karan@portfolio:${currentDir}`}
               </span>
             </motion.div>
+
+            {/* Sound Toggle Button in Header */}
+            <motion.button
+              onClick={toggleAudio}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-1 rounded hover:bg-white/10 transition-colors opacity-75 hover:opacity-100"
+              title={soundEnabled ? "Mute Mechanical Audio (sound off)" : "Enable Mechanical Audio (sound on)"}
+              aria-label={soundEnabled ? "Mute sound" : "Enable sound"}
+            >
+              {soundEnabled ? (
+                <Volume2 size={14} className="text-emerald-400" />
+              ) : (
+                <VolumeX size={14} className="opacity-50" />
+              )}
+            </motion.button>
           </div>
 
           {/* Terminal Body */}
@@ -1385,7 +1496,7 @@ const PortfolioCLI = ({
                 {/* Welcome Message & Session Date/Time */}
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
                   <p className="font-semibold mb-1 text-xs sm:text-sm flex items-center gap-2">
-                    <span>Welcome to Portfolio CLI v2.5 (Virtual OS & SSH Engine)</span>
+                    <span>Welcome to Portfolio CLI v2.5 (Virtual OS + Mechanical Audio)</span>
                     <span className={theme.accent}>⚡</span>
                   </p>
                   <p className="opacity-60 mb-3 text-xs">
@@ -1394,8 +1505,8 @@ const PortfolioCLI = ({
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
                   <p className="opacity-80 mb-3 sm:mb-4 text-xs sm:text-sm">
-                    Type '<span className="font-bold underline">help</span>' for available server commands or '
-                    <span className="font-bold underline">ssh guest@karan-server</span>' to test remote SSH mode.
+                    Type '<span className="font-bold underline">help</span>' for server commands or '
+                    <span className="font-bold underline">sound on</span>' to turn on mechanical keyboard audio.
                   </p>
                 </motion.div>
 
