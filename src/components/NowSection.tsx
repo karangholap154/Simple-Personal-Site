@@ -27,6 +27,24 @@ interface SiteNowStatus {
   updated_at: string;
 }
 
+interface GitHubEventCommit {
+  sha?: string;
+  message?: string;
+}
+
+interface GitHubEventPayload {
+  commits?: GitHubEventCommit[];
+}
+
+interface GitHubPublicEvent {
+  type: string;
+  created_at?: string;
+  repo?: {
+    name?: string;
+  };
+  payload?: GitHubEventPayload;
+}
+
 // Fallback baseline commits if GitHub rate limits (403 Forbidden) on fresh browser sessions
 const INITIAL_BASELINE_COMMITS: CommitDetail[] = [
   {
@@ -223,26 +241,26 @@ export const NowSection = () => {
           "https://api.github.com/users/karangholap154/events/public?per_page=30"
         );
         if (eventsRes.ok) {
-          const events = await eventsRes.json();
+          const events: GitHubPublicEvent[] = await eventsRes.json();
           const pushEvents = events.filter(
-            (e: any) => e.type === "PushEvent" && e.payload?.commits?.length > 0
+            (e) => e.type === "PushEvent" && (e.payload?.commits?.length ?? 0) > 0
           );
 
           for (const ev of pushEvents) {
             const repoName = ev.repo?.name?.replace(/^karangholap154\//i, "") || "";
-            const dateStr = ev.created_at;
-            for (const c of ev.payload.commits) {
-              const rawMsg = c.message || "";
-              allCommits.push({
-                sha: c.sha?.slice(0, 7) || Math.random().toString(),
-                repoName,
-                repoUrl: `https://github.com/karangholap154/${repoName}`,
-                message: cleanCommitMessage(rawMsg),
-                dateStr,
-                relativeTime: dateStr
-                  ? formatDistanceToNow(new Date(dateStr), { addSuffix: true })
-                  : "recently",
-              });
+            if (ev.created_at) {
+              const dateStr = ev.created_at;
+              for (const c of ev.payload?.commits ?? []) {
+                const rawMsg = c.message || "";
+                allCommits.push({
+                  sha: c.sha?.slice(0, 7) || Math.random().toString(),
+                  repoName,
+                  repoUrl: `https://github.com/karangholap154/${repoName}`,
+                  message: cleanCommitMessage(rawMsg),
+                  dateStr,
+                  relativeTime: formatDistanceToNow(new Date(dateStr), { addSuffix: true }),
+                });
+              }
             }
           }
         }
