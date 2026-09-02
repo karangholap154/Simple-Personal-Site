@@ -216,8 +216,8 @@ export const NowSection = () => {
           if (cachedObj.commits && cachedObj.commits.length > 0) {
             cachedCommits = cachedObj.commits;
             const ageMinutes = (Date.now() - (cachedObj.timestamp || 0)) / (1000 * 60);
-            // If cache is fresh (< 15 mins), use it immediately without network call
-            if (ageMinutes < 15) {
+            // If cache is fresh (< 30 mins), use it immediately without network call
+            if (ageMinutes < 30) {
               const repoSummaries = await fetchGeminiSummaries(cachedCommits!);
               const distinctRepos = Array.from(new Set(cachedCommits!.map((c) => c.repoName)));
               return {
@@ -234,13 +234,16 @@ export const NowSection = () => {
       }
 
       const allCommits: CommitDetail[] = [];
+      let isRateLimited = false;
 
       // Step A: Fetch public events from GitHub API
       try {
         const eventsRes = await fetch(
           "https://api.github.com/users/karangholap154/events/public?per_page=30"
         );
-        if (eventsRes.ok) {
+        if (eventsRes.status === 403) {
+          isRateLimited = true;
+        } else if (eventsRes.ok) {
           const events: GitHubPublicEvent[] = await eventsRes.json();
           const pushEvents = events.filter(
             (e) => e.type === "PushEvent" && (e.payload?.commits?.length ?? 0) > 0
@@ -268,14 +271,18 @@ export const NowSection = () => {
         // Events API network failure
       }
 
-      // Step B: Direct repo fallback if events API failed or empty
-      if (allCommits.length < 5) {
+      // Step B: Direct repo fallback if events API failed or empty (Skip if rate limited 403)
+      if (allCommits.length < 5 && !isRateLimited) {
         const fallbackRepos = ["pvt-web-razor", "Simple-Personal-Site"];
         for (const repoName of fallbackRepos) {
           try {
             const repoRes = await fetch(
               `https://api.github.com/repos/karangholap154/${repoName}/commits?per_page=5`
             );
+            if (repoRes.status === 403) {
+              isRateLimited = true;
+              break;
+            }
             if (repoRes.ok) {
               const commitsList = await repoRes.json();
               for (const c of commitsList) {
@@ -299,7 +306,7 @@ export const NowSection = () => {
         }
       }
 
-      // Step C: Rate Limit Shield (If 403 error returned empty commits)
+      // Step C: Rate Limit Shield (If 403 error or network failure returned empty commits)
       let finalCommits = allCommits;
 
       if (finalCommits.length === 0) {
@@ -336,7 +343,7 @@ export const NowSection = () => {
         latestTime: finalCommits[0]?.relativeTime || "recently",
       };
     },
-    staleTime: 1000 * 60 * 15, // Cache in memory for 15 mins
+    staleTime: 1000 * 60 * 30, // Cache in memory for 30 mins
     gcTime: 1000 * 60 * 60, // Garbage collection time: 1 hour
     retry: 1,
   });
