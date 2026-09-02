@@ -1,129 +1,183 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
-import { useTheme } from "next-themes";
-
-const GRID_W = 20;
-const GRID_H = 12;
-type Dir = "UP" | "DOWN" | "LEFT" | "RIGHT";
-interface Pos { x: number; y: number; }
-
-const renderSnakeGrid = (snake: Pos[], food: Pos, score: number, gameOver: boolean): string[] => {
-  const grid: string[][] = [];
-  for (let y = 0; y < GRID_H; y++) {
-    grid[y] = [];
-    for (let x = 0; x < GRID_W; x++) grid[y][x] = "·";
-  }
-  snake.forEach((s, i) => {
-    if (s.y >= 0 && s.y < GRID_H && s.x >= 0 && s.x < GRID_W)
-      grid[s.y][s.x] = i === 0 ? "█" : "▓";
-  });
-  if (food.y >= 0 && food.y < GRID_H && food.x >= 0 && food.x < GRID_W)
-    grid[food.y][food.x] = "●";
-  const border = "  +" + "─".repeat(GRID_W * 2) + "+";
-  const lines = [
-    "",
-    "  🐍 SNAKE GAME — Arrow keys to move, Q/Esc to quit",
-    "",
-    `  Score: ${score}`,
-    "",
-    border,
-  ];
-  for (let y = 0; y < GRID_H; y++)
-    lines.push("  |" + grid[y].map(c => c + " ").join("") + "|");
-  lines.push(border);
-  if (gameOver) lines.push("", "  💀 GAME OVER! Press Enter to restart or Q to quit.", "");
-  return lines;
-};
-
-const jokes = [
-  "Why do programmers prefer dark mode? Because light attracts bugs. 🐛",
-  "A SQL query walks into a bar, sees two tables, and asks... 'Can I JOIN you?'",
-  "!false — It's funny because it's true.",
-  "There are only 10 types of people: those who understand binary and those who don't.",
-  "Why was the JavaScript developer sad? Because he didn't Node how to Express himself.",
-  "What's a programmer's favorite hangout place? Foo Bar.",
-  "Algorithm: a word used by programmers when they don't want to explain what they did.",
-  "It works on my machine ¯\\_(ツ)_/¯",
-];
-
-const matrixChars = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ01234789";
-
-const generateMatrixLines = (): string[] => {
-  const lines: string[] = ["", "  ⚡ Entering the Matrix... ⚡", ""];
-  for (let i = 0; i < 6; i++) {
-    let line = "  ";
-    for (let j = 0; j < 40; j++)
-      line += matrixChars[Math.floor(Math.random() * matrixChars.length)];
-    lines.push(line);
-  }
-  lines.push("", "  Wake up, Karan... The Matrix has you.", "");
-  return lines;
-};
-
-const flipTable = [
-  "",
-  "  (╯°□°)╯︵ ┻━┻",
-  "",
-  "  Table flipped successfully.",
-  "  ...wait let me fix that.",
-  "",
-  "  ┬─┬ ノ( ゜-゜ノ)",
-  "",
-  "  There, all better. 😌",
-];
-
-const ASCII_NAME = `
-██╗  ██╗ █████╗ ██████╗  █████╗ ███╗   ██╗
-██║ ██╔╝██╔══██╗██╔══██╗██╔══██╗████╗  ██║
-█████╔╝ ███████║██████╔╝███████║██╔██╗ ██║
-██╔═██╗ ██╔══██║██╔══██╗██╔══██║██║╚██╗██║
-██║  ██╗██║  ██║██║  ██║██║  ██║██║ ╚████║
-╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
-`;
+import { useNavigate } from "react-router-dom";
 
 const helpList = [
-  "Available commands:",
+  "Available Commands (grouped by category):",
   "",
-  "  about                  - Learn about me",
-  "  skills                 - View my technical skills",
-  "  skills search [term]   - Search for a specific skill",
-  "  projects               - See my featured projects",
-  "  projects filter [type] - Filter projects by 'web' or 'mobile'",
-  "  contact                - Get my contact info",
-  "  social                 - View my social links",
-  "  resume                 - Download / open resume page",
-  "  cat resume             - Print resume text in terminal",
-  "  fetch / neofetch       - Display portfolio system info",
-  "  ls / dir               - List virtual directories & files",
-  "  cd [page]              - Navigate to page (e.g. cd projects)",
-  "  history                - Show command history",
-  "  banner                 - Show ASCII art banner",
-  "  theme [light|dark]     - Check or change website theme",
-  "  matrix                 - Enter the Matrix",
-  "  joke                   - Random dev joke",
-  "  flip                   - Flip a table",
-  "  whoami                 - Who are you?",
-  "  date                   - Current date & time",
-  "  echo [msg]             - Echo a message back",
-  "  snake                  - Play Snake! 🐍",
-  "  send / msg             - Send a message directly to Karan via CLI",
-  "  sudo / login           - Admin login flow",
-  "  logout                 - Sign out from admin session",
-  "  sudo messages          - View recent contact submissions (admin)",
-  "  clear                  - Clear the terminal",
-  "  help                   - Show this help message",
+  "  📁 NAVIGATION & DISCOVERY",
+  "    ls                     - List virtual directories & files",
+  "    tree                   - Display directory structure tree",
+  "    cd [page]              - Navigate to page (e.g. cd projects, cd resume)",
+  "    open [target]          - Open page or social link (e.g. open github, open resume)",
+  "    cat [file]             - View file contents (e.g. cat README.md, cat resume)",
+  "",
+  "  👤 PORTFOLIO INFO (DATABASE DRIVEN)",
+  "    projects               - Fetch all featured projects from database",
+  "    projects filter [type] - Filter projects by 'web' or 'mobile'",
+  "    experience / work      - Fetch work experience & career timeline",
+  "    education              - Fetch education history & degrees",
+  "    certs / certifications - Fetch professional certifications",
+  "    search [term]          - Global multi-table database search",
+  "    skills                 - View technical skills overview",
+  "    skills search [term]   - Search for specific skills",
+  "    about                  - Learn about Karan Gholap",
+  "    contact                - Get contact details",
+  "    social                 - View social media links",
+  "    fetch / neofetch       - Display portfolio system info",
+  "    download               - Download resume PDF",
+  "",
+  "  ⚡ INTERACTIVE & UTILITIES",
+  "    send                   - Launch interactive message wizard to contact Karan",
+  "    time / tz              - Display Pune, India timezone & local time",
+  "    calc [expr]            - Calculate a math expression (e.g. calc 25 * 4)",
+  "    shortcuts              - View CLI keybindings & hotkeys",
+  "    whoami                 - Check current session role (Guest / Admin)",
+  "    echo [msg]             - Echo text back",
+  "    clear                  - Clear terminal output",
+  "    help                   - Show this help menu",
+  "",
+  "  🔐 ADMIN / AUTHENTICATION",
+  "    sudo / login           - Admin authentication flow",
+  "    logout                 - Sign out from admin session",
+  "    sudo messages          - View contact form submissions (Admin)",
   "",
   "  💡 Tip: Press [Tab] or [→] for zsh-style ghost auto-complete!",
 ];
 
-const commands: Record<string, string | string[]> = {
-  help: helpList,
-  "?": helpList,
+const availableCommands = [
+  "about", "skills", "skills search", "projects", "projects filter",
+  "experience", "work", "education", "certs", "certifications", "search",
+  "contact", "social", "resume", "cat", "cat readme.md", "cat resume", "fetch", "neofetch",
+  "ls", "tree", "cd", "open", "download", "time", "tz", "calc", "shortcuts", "whoami",
+  "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help"
+];
+
+const treeOutput = [
+  "",
+  "  portfolio-root/",
+  "  ├── 📁 home/",
+  "  ├── 📁 projects/",
+  "  ├── 📁 resume/",
+  "  ├── 📁 contact/",
+  "  ├── 📁 gallery/",
+  "  ├── 📁 private-academy/",
+  "  ├── 📁 support/",
+  "  ├── 📄 README.md",
+  "  └── 📄 resume.pdf",
+  "",
+  "  💡 Tip: Type 'cd [directory]' or 'open [target]' to explore.",
+  "",
+];
+
+const readmeOutput = [
+  "",
+  "  =======================================================",
+  "  📄 README.md — Karan Gholap Portfolio System",
+  "  =======================================================",
+  "",
+  "  👋 Hello! I'm Karan Gholap",
+  "  Software Developer based in Pune, India 🇮🇳",
+  "",
+  "  💻 Specialties: React.js, Next.js, Node.js, TypeScript & PostgreSQL",
+  "  🚀 Role       : Trainee Developer @ CandorWorks",
+  "  🎓 Education  : B.E. Computer Engineering (Univ. of Mumbai)",
+  "  🌟 Founder    : Private Academy Engineering",
+  "",
+  "  Useful database commands:",
+  "    • Type 'experience' to view career history",
+  "    • Type 'projects' to fetch all projects from DB",
+  "    • Type 'education' to view degree details",
+  "    • Type 'search [term]' for global search",
+  "    • Type 'send' to drop a direct message",
+  "    • Type 'download' to save my resume",
+  "",
+];
+
+const resumeTextOutput = [
+  "",
+  "  📄 Karan Gholap — Resume Overview",
+  "  =======================================================",
+  "",
+  "  🎓 EDUCATION:",
+  "    • Bachelor of Engineering (Computer Engineering)",
+  "      University of Mumbai",
+  "",
+  "  💼 EXPERIENCE:",
+  "    • Trainee Developer @ CandorWorks",
+  "      - Full-stack web development & real-world projects.",
+  "    • Founder & Software Developer @ Private Academy Engineering",
+  "      - Designed and deployed EdTech platform for Mumbai Univ. students.",
+  "    • Tech & Business Efficiency Associate @ BURSANA Fashion Tech",
+  "",
+  "  🛠️ CORE SKILLS:",
+  "    • Frontend : React.js, Next.js, TypeScript, Tailwind CSS",
+  "    • Backend  : Node.js, Express.js, Python, REST APIs",
+  "    • Database : PostgreSQL, MongoDB, Supabase",
+  "",
+  "  Type 'download' to download PDF or 'open resume' to visit page.",
+  "",
+];
+
+const shortcutsOutput = [
+  "",
+  "  ⌨️ TERMINAL KEYBINDINGS & SHORTCUTS",
+  "  =======================================================",
+  "    Tab / →     : Autocomplete command / ghost suggestion",
+  "    ↑ / ↓       : Cycle through input command history",
+  "    Esc         : Cancel active contact/login wizard",
+  "    Ctrl + K    : Open global site-wide Command Palette",
+  "    clear       : Clear all output text",
+  "",
+];
+
+const evaluateMath = (expr: string): string => {
+  try {
+    const cleanExpr = expr.replace(/\^/g, "**").trim();
+    if (!/^[0-9+\-*/%.()\s**]+$/.test(cleanExpr)) {
+      return "  Error: Invalid math expression. Use standard arithmetic (e.g. calc 25 * 4 + 10).";
+    }
+    const result = new Function(`"use strict"; return (${cleanExpr})`)();
+    if (typeof result === "number" && !isNaN(result)) {
+      return `  Result: ${result}`;
+    }
+    return "  Error: Could not calculate result.";
+  } catch {
+    return "  Error: Invalid syntax in math expression.";
+  }
+};
+
+const getTimezoneOutput = (): string[] => {
+  const now = new Date();
+  const puneTime = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "full",
+    timeStyle: "medium",
+  }).format(now);
+
+  const localTime = new Intl.DateTimeFormat("default", {
+    dateStyle: "full",
+    timeStyle: "medium",
+  }).format(now);
+
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  return [
+    "",
+    "  🌍 TIME & TIMEZONE INFORMATION",
+    "  =======================================================",
+    `  📍 Karan (Pune, India - IST / UTC+5:30) : ${puneTime}`,
+    `  💻 Your Local Time (${userTz})          : ${localTime}`,
+    "",
+  ];
+};
+
+const commandsInfo: Record<string, string | string[]> = {
   about: [
     "Hi! I'm Karan Gholap 👋",
     "",
@@ -137,25 +191,11 @@ const commands: Record<string, string | string[]> = {
   skills: [
     "Technical Skills:",
     "",
-    "  Frontend   → React.js, Next.js, TypeScript, Tailwind CSS",
-    "  Backend    → Node.js, Express.js, Python, REST APIs",
-    "  Database   → MongoDB, PostgreSQL, MySQL",
-    "  DevOps     → Git, Docker, AWS, Vercel",
-    "  Tools      → VS Code, Figma, Postman",
-  ],
-  projects: [
-    "Featured Projects:",
-    "",
-    "  1. Private Academy Engineering",
-    "     → Educational platform for engineering students",
-    "",
-    "  2. PrivMate - AI Study Companion",
-    "     → AI-powered study companion",
-    "",
-    "  3. Bilix - Invoice Generator",
-    "     → Sleek invoice generator with customizable templates",
-    "",
-    "Type 'open projects' to view all projects",
+    "  Frontend   → React.js, Next.js, TypeScript, Tailwind CSS, Bootstrap",
+    "  Backend    → Node.js, Express.js, Python, Flask, REST APIs",
+    "  Database   → MongoDB, PostgreSQL, MySQL, Supabase",
+    "  DevOps     → Git, Docker, AWS, Vercel, Netlify",
+    "  Tools      → VS Code, Figma, Postman, JIRA",
   ],
   contact: [
     "Contact Information:",
@@ -174,8 +214,6 @@ const commands: Record<string, string | string[]> = {
     "  Instagram  → https://instagram.com/thekarangholap",
     "  Medium     → https://medium.com/@karan_gholap",
   ],
-  resume: ["Resume:", "", "  Opening resume page...", "  Or visit: /resume"],
-  "open projects": "Navigating to projects page...",
 };
 
 interface HistoryItem {
@@ -193,7 +231,6 @@ interface PortfolioCLIProps {
 const PortfolioCLI = ({
   open,
   onOpenChange,
-  isMinimizedGlobally,
   onMinimizeChange,
 }: PortfolioCLIProps) => {
   const [input, setInput] = useState("");
@@ -205,6 +242,14 @@ const PortfolioCLI = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const dialogContentRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const [sessionStartTime] = useState(() => {
+    return new Intl.DateTimeFormat("en-IN", {
+      dateStyle: "full",
+      timeStyle: "medium",
+    }).format(new Date());
+  });
 
   type SendState = "idle" | "awaiting_name" | "awaiting_email" | "awaiting_subject" | "awaiting_message" | "submitting";
   const [sendState, setSendState] = useState<SendState>("idle");
@@ -213,15 +258,6 @@ const PortfolioCLI = ({
   const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
   const [authEmail, setAuthEmail] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const { theme, setTheme } = useTheme();
-
-  const availableCommands = [
-    "about", "skills", "skills search", "projects", "projects filter",
-    "contact", "social", "resume", "cat resume", "fetch", "neofetch",
-    "ls", "dir", "cd", "history", "banner", "theme", "matrix", "joke",
-    "flip", "whoami", "date", "echo", "snake", "send", "msg", "contact send",
-    "sudo", "login", "logout", "messages", "clear", "help"
-  ];
 
   const ghostSuggestion = (() => {
     if (authState !== "idle" || sendState !== "idle" || !input.trim()) return "";
@@ -244,97 +280,11 @@ const PortfolioCLI = ({
     return () => subscription.unsubscribe();
   }, []);
 
-  const [snakeActive, setSnakeActive] = useState(false);
-  const [snake, setSnake] = useState<Pos[]>([{ x: 10, y: 6 }]);
-  const [food, setFood] = useState<Pos>({ x: 15, y: 6 });
-  const [snakeDir, setSnakeDir] = useState<Dir>("RIGHT");
-  const [snakeScore, setSnakeScore] = useState(0);
-  const [snakeGameOver, setSnakeGameOver] = useState(false);
-  const snakeDirRef = useRef<Dir>("RIGHT");
-  const snakeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const spawnFood = useCallback((currentSnake: Pos[]): Pos => {
-    let pos: Pos;
-    do {
-      pos = { x: Math.floor(Math.random() * GRID_W), y: Math.floor(Math.random() * GRID_H) };
-    } while (currentSnake.some(s => s.x === pos.x && s.y === pos.y));
-    return pos;
-  }, []);
-
-  const startSnake = useCallback(() => {
-    const initial = [{ x: 10, y: 6 }];
-    setSnake(initial);
-    setFood(spawnFood(initial));
-    setSnakeDir("RIGHT");
-    snakeDirRef.current = "RIGHT";
-    setSnakeScore(0);
-    setSnakeGameOver(false);
-    setSnakeActive(true);
-  }, [spawnFood]);
-
-  const stopSnake = useCallback(() => {
-    setSnakeActive(false);
-    if (snakeTimerRef.current) clearInterval(snakeTimerRef.current);
-    snakeTimerRef.current = null;
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, []);
-
-  useEffect(() => {
-    if (!snakeActive || snakeGameOver) {
-      if (snakeTimerRef.current) clearInterval(snakeTimerRef.current);
-      return;
-    }
-    snakeTimerRef.current = setInterval(() => {
-      setSnake(prev => {
-        const head = { ...prev[0] };
-        const dir = snakeDirRef.current;
-        if (dir === "UP") head.y--;
-        else if (dir === "DOWN") head.y++;
-        else if (dir === "LEFT") head.x--;
-        else head.x++;
-
-        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H || prev.some(s => s.x === head.x && s.y === head.y)) {
-          setSnakeGameOver(true);
-          return prev;
-        }
-
-        const newSnake = [head, ...prev];
-        setFood(f => {
-          if (head.x === f.x && head.y === f.y) {
-            setSnakeScore(s => s + 1);
-            const spawned = spawnFood(newSnake);
-            setTimeout(() => setFood(spawned), 0);
-            return f;
-          }
-          newSnake.pop();
-          return f;
-        });
-        return newSnake;
-      });
-    }, 150);
-    return () => { if (snakeTimerRef.current) clearInterval(snakeTimerRef.current); };
-  }, [snakeActive, snakeGameOver, spawnFood]);
-
-  useEffect(() => {
-    if (!snakeActive) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "q" || e.key === "Escape") { e.preventDefault(); stopSnake(); return; }
-      if (snakeGameOver && e.key === "Enter") { e.preventDefault(); startSnake(); return; }
-      const cur = snakeDirRef.current;
-      if (e.key === "ArrowUp" && cur !== "DOWN") { e.preventDefault(); snakeDirRef.current = "UP"; setSnakeDir("UP"); }
-      else if (e.key === "ArrowDown" && cur !== "UP") { e.preventDefault(); snakeDirRef.current = "DOWN"; setSnakeDir("DOWN"); }
-      else if (e.key === "ArrowLeft" && cur !== "RIGHT") { e.preventDefault(); snakeDirRef.current = "LEFT"; setSnakeDir("LEFT"); }
-      else if (e.key === "ArrowRight" && cur !== "LEFT") { e.preventDefault(); snakeDirRef.current = "RIGHT"; setSnakeDir("RIGHT"); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [snakeActive, snakeGameOver, stopSnake, startSnake]);
-
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [history, snake]);
+  }, [history]);
 
   useEffect(() => {
     if (open) {
@@ -342,6 +292,86 @@ const PortfolioCLI = ({
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
+
+  const triggerResumeDownload = async () => {
+    setHistory((prev) => [...prev, { command: "download", output: ["", "  📥 Preparing resume download...", ""] }]);
+    try {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "resume_pdf_url")
+        .maybeSingle();
+      const url = data?.value || "/resume.pdf";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Karan_Gholap_Resume.pdf";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setHistory((prev) => [...prev, { command: "", output: ["  🟢 Download started successfully!", ""] }]);
+    } catch {
+      window.open("/resume.pdf", "_blank");
+    }
+  };
+
+  const handleOpenOrCd = (targetStr: string, isCd: boolean) => {
+    const target = targetStr.trim().toLowerCase().replace(/^\/+|\/+$/g, "");
+
+    const routes: Record<string, string> = {
+      home: "/",
+      index: "/",
+      projects: "/projects",
+      resume: "/resume",
+      contact: "/contact",
+      gallery: "/gallery",
+      "private-academy": "/private-academy",
+      academy: "/private-academy",
+      support: "/support",
+      admin: "/admin",
+    };
+
+    const externalLinks: Record<string, string> = {
+      github: "https://github.com/karangholap154",
+      linkedin: "https://linkedin.com/in/karangholap",
+      twitter: "https://x.com/TheKaranGholap",
+      x: "https://x.com/TheKaranGholap",
+      instagram: "https://instagram.com/thekarangholap",
+      medium: "https://medium.com/@karan_gholap",
+      email: "mailto:karangholap@zohomail.in",
+      mail: "mailto:karangholap@zohomail.in",
+    };
+
+    if (!target || target === "~" || target === "home") {
+      navigate("/");
+      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", "  Navigated to Home page (/)", ""] }]);
+      return;
+    }
+
+    if (routes[target]) {
+      navigate(routes[target]);
+      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Navigated to ${routes[target]}`, ""] }]);
+      return;
+    }
+
+    if (externalLinks[target]) {
+      window.open(externalLinks[target], "_blank", "noopener,noreferrer");
+      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening external link: ${externalLinks[target]}`, ""] }]);
+      return;
+    }
+
+    if (target.startsWith("http://") || target.startsWith("https://")) {
+      window.open(target, "_blank", "noopener,noreferrer");
+      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening URL: ${target}`, ""] }]);
+      return;
+    }
+
+    setHistory((prev) => [
+      ...prev,
+      { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Error: target '${targetStr}' not found. Type 'ls' or 'help' to see valid targets.`, ""] }
+    ]);
+  };
 
   const handleCommand = async (cmd: string) => {
     const trimmedInput = cmd.trim();
@@ -413,7 +443,7 @@ const PortfolioCLI = ({
             output: [
               "",
               "  🟢 Message Sent Successfully!",
-              `  Thank you, ${finalPayload.name}! Your message has been stored.`,
+              `  Thank you, ${finalPayload.name}! Your message has been delivered.`,
               `  Karan will review it and get back to you at ${finalPayload.email}.`,
               "",
             ],
@@ -487,36 +517,258 @@ const PortfolioCLI = ({
     setHistoryIndex(-1);
 
     if (trimmedCmd === "clear") { setHistory([]); return; }
-
-    if (trimmedCmd === "snake") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Starting Snake... Use arrow keys to move! 🐍", ""] }]);
-      startSnake();
+    if (trimmedCmd === "help" || trimmedCmd === "?") {
+      setHistory((prev) => [...prev, { command: cmd, output: helpList }]);
       return;
     }
 
-    if (trimmedCmd === "resume" || trimmedCmd === "open resume") {
-      window.location.href = "/resume";
+    if (trimmedCmd === "tree") {
+      setHistory((prev) => [...prev, { command: cmd, output: treeOutput }]);
       return;
     }
 
-    if (trimmedCmd === "open projects") {
-      window.location.href = "/projects";
+    if (trimmedCmd === "shortcuts" || trimmedCmd === "keys") {
+      setHistory((prev) => [...prev, { command: cmd, output: shortcutsOutput }]);
       return;
     }
 
-    if (trimmedCmd === "matrix") {
-      setHistory((prev) => [...prev, { command: cmd, output: generateMatrixLines() }]);
+    if (trimmedCmd === "time" || trimmedCmd === "tz") {
+      setHistory((prev) => [...prev, { command: cmd, output: getTimezoneOutput() }]);
       return;
     }
-    if (trimmedCmd === "joke") {
-      const j = jokes[Math.floor(Math.random() * jokes.length)];
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  ${j}`, ""] }]);
+
+    if (trimmedCmd === "download" || trimmedCmd === "download resume") {
+      triggerResumeDownload();
       return;
     }
-    if (trimmedCmd === "flip") {
-      setHistory((prev) => [...prev, { command: cmd, output: flipTable }]);
+
+    if (trimmedCmd === "experience" || trimmedCmd === "work") {
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching work experience from database..."] }]);
+      try {
+        const { data, error } = await supabase
+          .from("experience")
+          .select("*")
+          .order("order", { ascending: true });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No work experience records found in database.", ""] }]);
+        } else {
+          const lines = ["", "  💼 WORK EXPERIENCE (from Supabase DB)", "  ==========================================="];
+          data.forEach((item, idx) => {
+            lines.push(
+              `  [${idx + 1}] ${item.role} @ ${item.company}`,
+              `      Duration : ${item.duration}`
+            );
+            if (Array.isArray(item.highlights) && item.highlights.length > 0) {
+              item.highlights.forEach((h: string) => {
+                lines.push(`      • ${h}`);
+              });
+            }
+            lines.push("");
+          });
+          setHistory((prev) => [...prev, { command: "", output: lines }]);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching experience: ${msg}`, ""] }]);
+      }
       return;
     }
+
+    if (trimmedCmd === "education") {
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching education details from database..."] }]);
+      try {
+        const { data, error } = await supabase
+          .from("education")
+          .select("*")
+          .order("order", { ascending: true });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No education records found in database.", ""] }]);
+        } else {
+          const lines = ["", "  🎓 EDUCATION HISTORY (from Supabase DB)", "  ==========================================="];
+          data.forEach((item, idx) => {
+            lines.push(
+              `  [${idx + 1}] ${item.degree}`,
+              `      Institution : ${item.institution}`,
+              `      Duration    : ${item.duration}`,
+              ""
+            );
+          });
+          setHistory((prev) => [...prev, { command: "", output: lines }]);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching education: ${msg}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd === "certifications" || trimmedCmd === "certs") {
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching certifications from database..."] }]);
+      try {
+        const { data, error } = await supabase
+          .from("certifications")
+          .select("*")
+          .order("order", { ascending: true });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No certification records found in database.", ""] }]);
+        } else {
+          const lines = ["", "  📜 CERTIFICATIONS (from Supabase DB)", "  ==========================================="];
+          data.forEach((item) => {
+            lines.push(`    🏆 ${item.name}`);
+          });
+          lines.push("");
+          setHistory((prev) => [...prev, { command: "", output: lines }]);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching certifications: ${msg}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd === "projects") {
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching all projects from database..."] }]);
+      try {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .order("order", { ascending: true });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No projects found in database.", ""] }]);
+        } else {
+          const lines = ["", "  🚀 FEATURED PROJECTS (from Supabase DB)", "  ==========================================="];
+          data.forEach((p, idx) => {
+            lines.push(
+              `  [${idx + 1}] ${p.title} (${(p.type || "WEB").toUpperCase()})`,
+              `      Role : ${p.role}`,
+              `      Desc : ${p.description}`
+            );
+            if (p.tech_stack && Array.isArray(p.tech_stack) && p.tech_stack.length > 0) {
+              lines.push(`      Tech : ${p.tech_stack.join(", ")}`);
+            }
+            lines.push("");
+          });
+          lines.push("  💡 Tip: Type 'open projects' to open projects page in browser.");
+          lines.push("");
+          setHistory((prev) => [...prev, { command: "", output: lines }]);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching projects: ${msg}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("search ")) {
+      const queryTerm = cmd.slice(7).trim();
+      if (!queryTerm) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: search [term] (e.g. search React, search Engineering)", ""] }]);
+        return;
+      }
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Searching database for "${queryTerm}"...`] }]);
+      try {
+        const [projRes, expRes, eduRes, certRes] = await Promise.all([
+          supabase.from("projects").select("*").or(`title.ilike.%${queryTerm}%,description.ilike.%${queryTerm}%,role.ilike.%${queryTerm}%`),
+          supabase.from("experience").select("*").or(`role.ilike.%${queryTerm}%,company.ilike.%${queryTerm}%`),
+          supabase.from("education").select("*").or(`degree.ilike.%${queryTerm}%,institution.ilike.%${queryTerm}%`),
+          supabase.from("certifications").select("*").ilike("name", `%${queryTerm}%`)
+        ]);
+
+        const results: string[] = ["", `  🔍 SEARCH RESULTS FOR "${queryTerm}"`, "  ==========================================="];
+        let count = 0;
+
+        if (projRes.data && projRes.data.length > 0) {
+          results.push("  🚀 Projects:");
+          projRes.data.forEach((p) => {
+            results.push(`     • ${p.title} (${p.role}) - ${p.description}`);
+            count++;
+          });
+          results.push("");
+        }
+
+        if (expRes.data && expRes.data.length > 0) {
+          results.push("  💼 Work Experience:");
+          expRes.data.forEach((e) => {
+            results.push(`     • ${e.role} @ ${e.company} (${e.duration})`);
+            count++;
+          });
+          results.push("");
+        }
+
+        if (eduRes.data && eduRes.data.length > 0) {
+          results.push("  🎓 Education:");
+          eduRes.data.forEach((ed) => {
+            results.push(`     • ${ed.degree} @ ${ed.institution}`);
+            count++;
+          });
+          results.push("");
+        }
+
+        if (certRes.data && certRes.data.length > 0) {
+          results.push("  📜 Certifications:");
+          certRes.data.forEach((c) => {
+            results.push(`     • ${c.name}`);
+            count++;
+          });
+          results.push("");
+        }
+
+        if (count === 0) {
+          setHistory((prev) => [...prev, { command: "", output: ["", `  No matching records found across database for "${queryTerm}".`, ""] }]);
+        } else {
+          setHistory((prev) => [...prev, { command: "", output: results }]);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error searching database: ${msg}`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("calc ")) {
+      const expr = cmd.slice(5);
+      const res = evaluateMath(expr);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", res, ""] }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("cat ")) {
+      const filename = trimmedCmd.slice(4).trim().toLowerCase();
+      if (filename === "readme.md" || filename === "readme" || filename === "bio") {
+        setHistory((prev) => [...prev, { command: cmd, output: readmeOutput }]);
+      } else if (filename === "resume" || filename === "resume.pdf") {
+        setHistory((prev) => [...prev, { command: cmd, output: resumeTextOutput }]);
+      } else if (filename === "contact") {
+        setHistory((prev) => [...prev, { command: cmd, output: commandsInfo.contact as string[] }]);
+      } else if (filename === "skills") {
+        setHistory((prev) => [...prev, { command: cmd, output: commandsInfo.skills as string[] }]);
+      } else {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  cat: ${filename}: No such file. Try 'cat README.md' or 'cat resume'`, ""] }]);
+      }
+      return;
+    }
+
+    if (trimmedCmd === "resume") {
+      handleOpenOrCd("resume", false);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("open ")) {
+      const target = cmd.slice(5);
+      handleOpenOrCd(target, false);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("cd")) {
+      const target = cmd.slice(2);
+      handleOpenOrCd(target, true);
+      return;
+    }
+
     if (trimmedCmd === "whoami" || trimmedCmd === "sudo whoami") {
       if (currentUser) {
         setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: admin`, `  Email: ${currentUser.email}`, `  Role: authenticated`, ""] }]);
@@ -525,10 +777,7 @@ const PortfolioCLI = ({
       }
       return;
     }
-    if (trimmedCmd === "date") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  ${new Date().toLocaleString()}`, ""] }]);
-      return;
-    }
+
     if (trimmedCmd === "fetch" || trimmedCmd === "neofetch") {
       const fetchOutput = [
         "",
@@ -538,52 +787,24 @@ const PortfolioCLI = ({
         "  Host     → karangholap.com",
         "  Kernel   → React 18 + Vite 5 + TypeScript",
         "  Uptime   → 24/7 (Vercel CDN)",
-        "  Shell    → portfolio-cli v1.0",
+        "  Shell    → portfolio-cli v2.0",
         "  Role     → Software Developer @ CandorWorks",
         "  Founder  → Private Academy Engineering",
         "  Location → Pune, India (UTC +5:30) 📍",
         "  Stack    → React, Node.js, TypeScript, Tailwind, Supabase",
-        "  Theme    → Custom Dark / Light Mode",
         "",
       ];
       setHistory((prev) => [...prev, { command: cmd, output: fetchOutput }]);
       return;
     }
-    if (trimmedCmd === "cat resume") {
-      const resumeOutput = [
-        "",
-        "  📄 Karan Gholap — Resume Overview",
-        "  =======================================================",
-        "",
-        "  🎓 EDUCATION:",
-        "    • Bachelor of Engineering (Computer Engineering)",
-        "      University of Mumbai",
-        "",
-        "  💼 EXPERIENCE:",
-        "    • Trainee Developer @ CandorWorks",
-        "      - Full-stack web development & real-world projects.",
-        "    • Founder & Software Developer @ Private Academy Engineering",
-        "      - Designed and deployed EdTech platform for Mumbai Univ. students.",
-        "    • Tech & Business Efficiency Associate @ BURSANA Fashion Tech",
-        "",
-        "  🛠️ CORE SKILLS:",
-        "    • Frontend : React.js, Next.js, TypeScript, Tailwind CSS",
-        "    • Backend  : Node.js, Express.js, Python, REST APIs",
-        "    • Database : PostgreSQL, MongoDB, Supabase",
-        "",
-        "  Type 'resume' or visit /resume to view/download full PDF.",
-        "",
-      ];
-      setHistory((prev) => [...prev, { command: cmd, output: resumeOutput }]);
-      return;
-    }
+
     if (trimmedCmd.startsWith("echo ")) {
-      const msg = cmd.trim().slice(5);
+      const msg = cmd.slice(5);
       setHistory((prev) => [...prev, { command: cmd, output: [msg || ""] }]);
       return;
     }
 
-    // New Interactive Commands
+    // Contact interactive wizard
     if (trimmedCmd === "send" || trimmedCmd === "msg" || trimmedCmd === "contact send") {
       setHistory((prev) => [
         ...prev,
@@ -681,64 +902,10 @@ const PortfolioCLI = ({
         "  -rw-r--r--  1 karan staff 2555 Sep  2 00:59 README.md",
         "  -rw-r--r--  1 karan staff  408 Sep  2 00:59 resume.pdf",
         "",
-        "  💡 Tip: Type 'cd [directory]' to navigate or 'cat resume' to view.",
+        "  💡 Tip: Type 'cd [directory]' to navigate or 'cat README.md' to view.",
         "",
       ];
       setHistory((prev) => [...prev, { command: cmd, output: lsOutput }]);
-      return;
-    }
-
-    if (trimmedCmd.startsWith("cd")) {
-      const targetDir = trimmedCmd.slice(2).trim().replace(/^\/+|\/+$/g, "");
-      const validRoutes: Record<string, string> = {
-        home: "/",
-        index: "/",
-        projects: "/projects",
-        resume: "/resume",
-        contact: "/contact",
-        gallery: "/gallery",
-        "private-academy": "/private-academy",
-        support: "/support",
-      };
-      if (targetDir === "" || targetDir === "~" || targetDir === "home") {
-        window.location.href = "/";
-        return;
-      }
-      if (validRoutes[targetDir]) {
-        window.location.href = validRoutes[targetDir];
-        return;
-      }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  cd: no such directory: ${targetDir}`, ""] }]);
-      return;
-    }
-
-    if (trimmedCmd === "history") {
-      if (commandHistory.length === 0) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  No command history recorded yet.", ""] }]);
-      } else {
-        const histLines = ["", "  --- COMMAND HISTORY ---", ""];
-        commandHistory.forEach((c, idx) => {
-          histLines.push(`  ${(idx + 1).toString().padStart(3, " ")}  ${c}`);
-        });
-        histLines.push("");
-        setHistory((prev) => [...prev, { command: cmd, output: histLines }]);
-      }
-      return;
-    }
-
-    if (trimmedCmd === "banner") {
-      setHistory((prev) => [...prev, { command: cmd, output: [ASCII_NAME] }]);
-      return;
-    }
-
-    if (trimmedCmd.startsWith("theme")) {
-      const targetTheme = trimmedCmd.slice(5).trim();
-      if (targetTheme === "light" || targetTheme === "dark") {
-        setTheme(targetTheme);
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Theme changed to ${targetTheme} ⚡`, ""] }]);
-      } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Current theme: ${theme || "dark"}. Usage: theme [light|dark]`, ""] }]);
-      }
       return;
     }
 
@@ -802,7 +969,7 @@ const PortfolioCLI = ({
       return;
     }
 
-    const output = commands[trimmedCmd];
+    const output = commandsInfo[trimmedCmd];
     if (output) {
       setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output] }]);
     } else {
@@ -894,12 +1061,6 @@ const PortfolioCLI = ({
     setIsMinimized(false);
     onMinimizeChange?.(true);
     onOpenChange(false);
-  };
-
-  const handleRestore = () => {
-    setIsMinimized(false);
-    onMinimizeChange?.(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleFullscreen = () => setIsFullscreen(!isFullscreen);
@@ -996,26 +1157,20 @@ const PortfolioCLI = ({
                 : "h-[75vh] sm:h-[75vh] md:h-[60vh] lg:h-[500px]"
             }`}
           >
-            {/* ASCII Art */}
-            <motion.pre
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-              className="text-[0.5rem] sm:text-xs md:text-sm leading-tight mb-3 sm:mb-4 overflow-x-auto whitespace-pre"
-            >
-              <span className="text-[hsl(175,100%,50%)]">{ASCII_NAME}</span>
-            </motion.pre>
-
-            {/* Welcome Message */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
-              <p className="text-[hsl(0,0%,70%)] mb-1 text-xs sm:text-sm">
-                Welcome to my portfolio CLI! <span className="inline-block">👋</span>
+            {/* Welcome Message & Session Date/Time */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
+              <p className="text-[hsl(0,0%,90%)] font-semibold mb-1 text-xs sm:text-sm flex items-center gap-2">
+                <span>Welcome to Portfolio CLI v2.0</span>
+                <span className="text-[hsl(175,100%,50%)]">⚡</span>
+              </p>
+              <p className="text-[hsl(0,0%,50%)] mb-3 text-xs">
+                Session started: {sessionStartTime}
               </p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45, duration: 0.4 }}>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
               <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
                 Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '
-                <span className="text-[hsl(0,0%,95%)]">?</span>' to see available commands.
+                <span className="text-[hsl(0,0%,95%)]">?</span>' to list all commands.
               </p>
             </motion.div>
 
@@ -1056,7 +1211,7 @@ const PortfolioCLI = ({
                           initial={{ opacity: 0, x: -5 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -5 }}
-                          transition={{ delay: lineIndex * 0.05, duration: 0.2 }}
+                          transition={{ delay: lineIndex * 0.03, duration: 0.2 }}
                           className="whitespace-pre overflow-x-auto"
                         >
                           {line || "\u00A0"}
@@ -1068,74 +1223,61 @@ const PortfolioCLI = ({
               ))}
             </AnimatePresence>
 
-            {/* Snake Game Area */}
-            {snakeActive && (
-              <div className="mb-2 sm:mb-3 text-[hsl(142,70%,55%)]">
-                {renderSnakeGrid(snake, food, snakeScore, snakeGameOver).map((line, i) => (
-                  <div key={i} className="whitespace-pre overflow-x-auto leading-tight text-[0.65rem] sm:text-xs">
-                    {line || "\u00A0"}
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Current Input Line */}
-            {!snakeActive && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.3 }}
-                className="flex items-center gap-1 sm:gap-2 flex-wrap w-full"
-              >
-                {sendState === "awaiting_name" ? (
-                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 1/4 (Your Name):</span>
-                ) : sendState === "awaiting_email" ? (
-                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 2/4 (Your Email):</span>
-                ) : sendState === "awaiting_subject" ? (
-                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 3/4 (Subject):</span>
-                ) : sendState === "awaiting_message" ? (
-                  <span className="text-[hsl(175,100%,50%)] font-medium">Step 4/4 (Message):</span>
-                ) : sendState === "submitting" ? (
-                  <span className="text-muted-foreground animate-pulse">Delivering message...</span>
-                ) : authState === "awaiting_email" ? (
-                  <span className="text-[hsl(200,80%,60%)]">Enter Email:</span>
-                ) : authState === "awaiting_password" ? (
-                  <span className="text-[hsl(200,80%,60%)]">Enter Password:</span>
-                ) : authState === "authenticating" ? (
-                  <span className="text-muted-foreground animate-pulse">Authenticating...</span>
-                ) : (
-                  <>
-                    <span className="text-[hsl(142,70%,55%)]">
-                      {currentUser ? "admin@karan" : "dev@karan"}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.3 }}
+              className="flex items-center gap-1 sm:gap-2 flex-wrap w-full"
+            >
+              {sendState === "awaiting_name" ? (
+                <span className="text-[hsl(175,100%,50%)] font-medium">Step 1/4 (Your Name):</span>
+              ) : sendState === "awaiting_email" ? (
+                <span className="text-[hsl(175,100%,50%)] font-medium">Step 2/4 (Your Email):</span>
+              ) : sendState === "awaiting_subject" ? (
+                <span className="text-[hsl(175,100%,50%)] font-medium">Step 3/4 (Subject):</span>
+              ) : sendState === "awaiting_message" ? (
+                <span className="text-[hsl(175,100%,50%)] font-medium">Step 4/4 (Message):</span>
+              ) : sendState === "submitting" ? (
+                <span className="text-muted-foreground animate-pulse">Delivering message...</span>
+              ) : authState === "awaiting_email" ? (
+                <span className="text-[hsl(200,80%,60%)]">Enter Email:</span>
+              ) : authState === "awaiting_password" ? (
+                <span className="text-[hsl(200,80%,60%)]">Enter Password:</span>
+              ) : authState === "authenticating" ? (
+                <span className="text-muted-foreground animate-pulse">Authenticating...</span>
+              ) : (
+                <>
+                  <span className="text-[hsl(142,70%,55%)]">
+                    {currentUser ? "admin@karan" : "dev@karan"}
+                  </span>
+                  <span className="text-[hsl(0,0%,50%)]">~</span>
+                  <span className="text-[hsl(0,0%,50%)]">{currentUser ? "#" : "$"}</span>
+                </>
+              )}
+              
+              {authState !== "authenticating" && sendState !== "submitting" && (
+                <div className="relative flex-1 min-w-[150px] flex items-center">
+                  <input
+                    ref={inputRef}
+                    type={authState === "awaiting_password" ? "password" : "text"}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="w-full bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all z-10 font-mono"
+                    spellCheck={false}
+                    autoComplete="off"
+                  />
+                  {ghostSuggestion && (
+                    <span className="absolute left-0 pointer-events-none text-[hsl(0,0%,45%)] whitespace-pre select-none z-0 font-mono">
+                      <span className="opacity-0">{input}</span>
+                      {ghostSuggestion}
                     </span>
-                    <span className="text-[hsl(0,0%,50%)]">~</span>
-                    <span className="text-[hsl(0,0%,50%)]">{currentUser ? "#" : "$"}</span>
-                  </>
-                )}
-                
-                {authState !== "authenticating" && sendState !== "submitting" && (
-                  <div className="relative flex-1 min-w-[150px] flex items-center">
-                    <input
-                      ref={inputRef}
-                      type={authState === "awaiting_password" ? "password" : "text"}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="w-full bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all z-10 font-mono"
-                      spellCheck={false}
-                      autoComplete="off"
-                    />
-                    {ghostSuggestion && (
-                      <span className="absolute left-0 pointer-events-none text-[hsl(0,0%,45%)] whitespace-pre select-none z-0 font-mono">
-                        <span className="opacity-0">{input}</span>
-                        {ghostSuggestion}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            )}
+                  )}
+                </div>
+              )}
+            </motion.div>
           </motion.div>
         </motion.div>
       </DialogContent>
