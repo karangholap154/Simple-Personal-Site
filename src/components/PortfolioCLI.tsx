@@ -6,16 +6,50 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
+import {
+  loadVFS,
+  saveVFS,
+  loadTheme,
+  saveTheme,
+  resolvePath,
+  formatLsOutput,
+  executeMkdir,
+  executeTouch,
+  executeRm,
+  executeCat,
+  executeWriteFile,
+  getSSHBanner,
+  generateTopData,
+  executePing,
+  executeDf,
+  executeFree,
+  executeNetstat,
+  themes,
+  VFSNode,
+} from "@/utils/virtualOS";
 
 const helpList = [
   "Available Commands (grouped by category):",
   "",
-  "  📁 NAVIGATION & DISCOVERY",
-  "    ls                     - List virtual directories & files",
-  "    tree                   - Display directory structure tree",
-  "    cd [page]              - Navigate to page (e.g. cd projects, cd resume)",
-  "    open [target]          - Open page or social link (e.g. open github, open resume)",
-  "    cat [file]             - View file contents (e.g. cat README.md, cat resume)",
+  "  🖥️ SERVER & SSH EMULATION",
+  "    ssh [user@host]        - SSH into server (e.g. ssh guest@karan-server)",
+  "    exit / logout          - Close active SSH session or exit monitor",
+  "    top / htop             - Interactive real-time process monitor (Press 'q' to exit)",
+  "    ping [host]            - Send ICMP echo requests to host",
+  "    df / df -h             - Display disk filesystem usage",
+  "    free / free -m         - Display memory allocation stats",
+  "    netstat                - Display active server network ports",
+  "",
+  "  📁 VIRTUAL FILESYSTEM (POSIX COMMANDS)",
+  "    pwd                    - Print current working directory",
+  "    ls [-la] [dir]         - List files with detailed permissions & info",
+  "    cd [path]              - Change directory (e.g. cd projects, cd /var/log, cd ..)",
+  "    mkdir [dir]            - Create a new directory in virtual storage",
+  "    touch [file]           - Create or update a file in virtual storage",
+  "    rm [-r] [path]         - Remove a file or directory",
+  "    cat [file]             - Display file contents",
+  "    echo [text] > [file]   - Write text content to a file",
+  "    tree                   - Display full virtual filesystem tree",
   "",
   "  👤 PORTFOLIO INFO (DATABASE DRIVEN)",
   "    projects               - Fetch all featured projects from database",
@@ -32,12 +66,13 @@ const helpList = [
   "    fetch / neofetch       - Display portfolio system info",
   "    download               - Download resume PDF",
   "",
-  "  ⚡ INTERACTIVE & UTILITIES",
+  "  ⚡ UTILITIES & CUSTOMIZATION",
+  "    theme set [name]       - Change theme (matrix, dracula, cyberpunk, ubuntu, default)",
   "    send                   - Launch interactive message wizard to contact Karan",
   "    time / tz              - Display Pune, India timezone & local time",
   "    calc [expr]            - Calculate a math expression (e.g. calc 25 * 4)",
   "    shortcuts              - View CLI keybindings & hotkeys",
-  "    whoami                 - Check current session role (Guest / Admin)",
+  "    whoami                 - Check current session role (Guest / Admin / SSH)",
   "    echo [msg]             - Echo text back",
   "    clear                  - Clear terminal output",
   "    help                   - Show this help menu",
@@ -53,25 +88,36 @@ const helpList = [
 const availableCommands = [
   "about", "skills", "skills search", "projects", "projects filter",
   "experience", "work", "education", "certs", "certifications", "search",
-  "contact", "social", "resume", "cat", "cat readme.md", "cat resume", "fetch", "neofetch",
-  "ls", "tree", "cd", "open", "download", "time", "tz", "calc", "shortcuts", "whoami",
-  "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help"
+  "contact", "social", "resume", "cat", "cat README.md", "cat resume", "fetch", "neofetch",
+  "ls", "ls -la", "ls -l", "ls -a", "pwd", "cd", "mkdir", "touch", "rm", "rm -r", "tree", "open", "download",
+  "ssh", "ssh guest@karan-server", "exit", "top", "htop", "ping", "df", "df -h", "free", "free -m", "netstat",
+  "theme", "theme set matrix", "theme set dracula", "theme set cyberpunk", "theme set ubuntu", "theme set default",
+  "time", "tz", "calc", "shortcuts", "whoami", "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help"
 ];
 
 const treeOutput = [
   "",
-  "  portfolio-root/",
+  "  / (VFS Root)",
   "  ├── 📁 home/",
-  "  ├── 📁 projects/",
-  "  ├── 📁 resume/",
-  "  ├── 📁 contact/",
-  "  ├── 📁 gallery/",
-  "  ├── 📁 private-academy/",
-  "  ├── 📁 support/",
-  "  ├── 📄 README.md",
-  "  └── 📄 resume.pdf",
+  "  │   ├── 📁 karan/",
+  "  │   │   ├── 📄 README.md",
+  "  │   │   ├── 📄 resume.pdf",
+  "  │   │   ├── 📄 notes.txt",
+  "  │   │   └── 📁 projects/",
+  "  │   │       ├── 📄 private-academy.md",
+  "  │   │       └── 📄 bursana.md",
+  "  │   └── 📁 guest/",
+  "  │       └── 📄 welcome.txt",
+  "  ├── 📁 var/",
+  "  │   └── 📁 log/",
+  "  │       ├── 📄 syslog",
+  "  │       └── 📄 auth.log",
+  "  ├── 📁 etc/",
+  "  │   ├── 📄 hostname",
+  "  │   └── 📄 os-release",
+  "  └── 📁 tmp/",
   "",
-  "  💡 Tip: Type 'cd [directory]' or 'open [target]' to explore.",
+  "  💡 Tip: Use 'cd [path]' to navigate directories and 'cat [file]' to view files.",
   "",
 ];
 
@@ -96,6 +142,7 @@ const readmeOutput = [
   "    • Type 'search [term]' for global search",
   "    • Type 'send' to drop a direct message",
   "    • Type 'download' to save my resume",
+  "    • Type 'ssh guest@karan-server' for server mode",
   "",
 ];
 
@@ -130,7 +177,8 @@ const shortcutsOutput = [
   "  =======================================================",
   "    Tab / →     : Autocomplete command / ghost suggestion",
   "    ↑ / ↓       : Cycle through input command history",
-  "    Esc         : Cancel active contact/login wizard",
+  "    Esc         : Cancel active contact/login wizard or exit top monitor",
+  "    q           : Exit live 'top' / 'htop' process monitor",
   "    Ctrl + K    : Open global site-wide Command Palette",
   "    clear       : Clear all output text",
   "",
@@ -219,6 +267,8 @@ const commandsInfo: Record<string, string | string[]> = {
 interface HistoryItem {
   command: string;
   output: string[];
+  cwd?: string;
+  userPrompt?: string;
 }
 
 interface PortfolioCLIProps {
@@ -235,7 +285,14 @@ const PortfolioCLI = ({
 }: PortfolioCLIProps) => {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [commandHistory, setCommandHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("portfolio_cli_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -243,6 +300,16 @@ const PortfolioCLI = ({
   const terminalRef = useRef<HTMLDivElement>(null);
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Virtual OS & SSH State
+  const [vfs, setVfs] = useState<VFSNode>(loadVFS);
+  const [currentDir, setCurrentDir] = useState<string>("/home/karan");
+  const [sshSession, setSshSession] = useState<{ isConnected: boolean; host: string; user: string } | null>(null);
+  const [activeView, setActiveView] = useState<"terminal" | "top">("terminal");
+  const [themeName, setThemeName] = useState<string>(loadTheme);
+  const [topTick, setTopTick] = useState(0);
+
+  const theme = themes[themeName] || themes.default;
 
   const [sessionStartTime] = useState(() => {
     return new Intl.DateTimeFormat("en-IN", {
@@ -260,14 +327,23 @@ const PortfolioCLI = ({
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const ghostSuggestion = (() => {
-    if (authState !== "idle" || sendState !== "idle" || !input.trim()) return "";
+    if (authState !== "idle" || sendState !== "idle" || activeView !== "terminal" || !input.trim()) return "";
     const q = input.toLowerCase();
-    const match = availableCommands.find((c) => c.startsWith(q) && c !== q);
+    const match = availableCommands.find((c) => c.toLowerCase().startsWith(q) && c.toLowerCase() !== q);
     if (!match) return "";
     return match.slice(q.length);
   })();
 
-  // Listen to Supabase auth state changes
+  // Sync command history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("portfolio_cli_history", JSON.stringify(commandHistory.slice(-50)));
+    } catch {
+      // ignore
+    }
+  }, [commandHistory]);
+
+  // Supabase auth listener
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setCurrentUser(session?.user ?? null);
@@ -280,11 +356,22 @@ const PortfolioCLI = ({
     return () => subscription.unsubscribe();
   }, []);
 
+  // Interval for top live update
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeView === "top") {
+      timer = setInterval(() => {
+        setTopTick((t) => t + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [activeView]);
+
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [history]);
+  }, [history, activeView]);
 
   useEffect(() => {
     if (open) {
@@ -317,7 +404,8 @@ const PortfolioCLI = ({
   };
 
   const handleOpenOrCd = (targetStr: string, isCd: boolean) => {
-    const target = targetStr.trim().toLowerCase().replace(/^\/+|\/+$/g, "");
+    const target = targetStr.trim().replace(/^\/+|\/+$/g, "");
+    const lowerTarget = target.toLowerCase();
 
     const routes: Record<string, string> = {
       home: "/",
@@ -343,27 +431,34 @@ const PortfolioCLI = ({
       mail: "mailto:karangholap@zohomail.in",
     };
 
-    if (!target || target === "~" || target === "home") {
-      navigate("/");
-      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", "  Navigated to Home page (/)", ""] }]);
+    if (routes[lowerTarget]) {
+      navigate(routes[lowerTarget]);
+      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Navigated web page to ${routes[lowerTarget]}`, ""] }]);
       return;
     }
 
-    if (routes[target]) {
-      navigate(routes[target]);
-      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Navigated to ${routes[target]}`, ""] }]);
-      return;
-    }
-
-    if (externalLinks[target]) {
-      window.open(externalLinks[target], "_blank", "noopener,noreferrer");
-      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening external link: ${externalLinks[target]}`, ""] }]);
+    if (externalLinks[lowerTarget]) {
+      window.open(externalLinks[lowerTarget], "_blank", "noopener,noreferrer");
+      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening external link: ${externalLinks[lowerTarget]}`, ""] }]);
       return;
     }
 
     if (target.startsWith("http://") || target.startsWith("https://")) {
       window.open(target, "_blank", "noopener,noreferrer");
       setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening URL: ${target}`, ""] }]);
+      return;
+    }
+
+    // Try VFS Directory navigation
+    if (isCd) {
+      const newPath = resolvePath(currentDir, targetStr);
+      const outputLines = formatLsOutput(vfs, currentDir, targetStr);
+      if (outputLines.length > 0 && outputLines[0].includes("No such file")) {
+        setHistory((prev) => [...prev, { command: `cd ${targetStr}`, output: ["", `  cd: ${targetStr}: No such file or directory`, ""] }]);
+      } else {
+        setCurrentDir(newPath);
+        setHistory((prev) => [...prev, { command: `cd ${targetStr}`, output: [] }]);
+      }
       return;
     }
 
@@ -376,13 +471,17 @@ const PortfolioCLI = ({
   const handleCommand = async (cmd: string) => {
     const trimmedInput = cmd.trim();
 
+    if (activeView === "top") {
+      if (trimmedInput.toLowerCase() === "q" || trimmedInput.toLowerCase() === "exit") {
+        setActiveView("terminal");
+      }
+      return;
+    }
+
     if (sendState === "awaiting_name") {
       if (!trimmedInput) return;
       setSendForm((prev) => ({ ...prev, name: trimmedInput }));
-      setHistory((prev) => [
-        ...prev,
-        { command: "Name: " + trimmedInput, output: ["", "  Step 2/4: Enter your email address:", ""] }
-      ]);
+      setHistory((prev) => [...prev, { command: "Name: " + trimmedInput, output: ["", "  Step 2/4: Enter your email address:", ""] }]);
       setSendState("awaiting_email");
       return;
     }
@@ -391,17 +490,11 @@ const PortfolioCLI = ({
       if (!trimmedInput) return;
       const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedInput);
       if (!isEmailValid) {
-        setHistory((prev) => [
-          ...prev,
-          { command: "Email: " + trimmedInput, output: ["", "  🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):", ""] }
-        ]);
+        setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: ["", "  🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):", ""] }]);
         return;
       }
       setSendForm((prev) => ({ ...prev, email: trimmedInput }));
-      setHistory((prev) => [
-        ...prev,
-        { command: "Email: " + trimmedInput, output: ["", "  Step 3/4: Subject / Topic?", ""] }
-      ]);
+      setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: ["", "  Step 3/4: Subject / Topic?", ""] }]);
       setSendState("awaiting_subject");
       return;
     }
@@ -409,10 +502,7 @@ const PortfolioCLI = ({
     if (sendState === "awaiting_subject") {
       if (!trimmedInput) return;
       setSendForm((prev) => ({ ...prev, subject: trimmedInput }));
-      setHistory((prev) => [
-        ...prev,
-        { command: "Subject: " + trimmedInput, output: ["", "  Step 4/4: Type your message body:", ""] }
-      ]);
+      setHistory((prev) => [...prev, { command: "Subject: " + trimmedInput, output: ["", "  Step 4/4: Type your message body:", ""] }]);
       setSendState("awaiting_message");
       return;
     }
@@ -420,20 +510,12 @@ const PortfolioCLI = ({
     if (sendState === "awaiting_message") {
       if (!trimmedInput) return;
       const finalPayload = { ...sendForm, message: trimmedInput };
-      setHistory((prev) => [
-        ...prev,
-        { command: "Message: " + trimmedInput, output: ["", "  Connecting to database & delivering message..."] }
-      ]);
+      setHistory((prev) => [...prev, { command: "Message: " + trimmedInput, output: ["", "  Connecting to database & delivering message..."] }]);
       setSendState("submitting");
 
       try {
         const { error } = await supabase.from("contact_messages").insert([
-          {
-            name: finalPayload.name,
-            email: finalPayload.email,
-            subject: finalPayload.subject,
-            message: finalPayload.message,
-          },
+          { name: finalPayload.name, email: finalPayload.email, subject: finalPayload.subject, message: finalPayload.message },
         ]);
         if (error) throw error;
         setHistory((prev) => [
@@ -451,18 +533,7 @@ const PortfolioCLI = ({
         ]);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: "",
-            output: [
-              "",
-              `  🔴 Error sending message: ${msg}`,
-              "  Please try again or email karangholap@zohomail.in directly.",
-              "",
-            ],
-          },
-        ]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error sending message: ${msg}`, "  Please try again or email karangholap@zohomail.in directly.", ""] }]);
       } finally {
         setSendState("idle");
         setSendForm({ name: "", email: "", subject: "", message: "" });
@@ -482,27 +553,12 @@ const PortfolioCLI = ({
       setHistory((prev) => [...prev, { command: "Password: " + "•".repeat(trimmedInput.length), output: ["Connecting to Supabase auth..."] }]);
       setAuthState("authenticating");
       try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password: trimmedInput
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: trimmedInput });
         if (error) throw error;
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: "",
-            output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""]
-          }
-        ]);
+        setHistory((prev) => [...prev, { command: "", output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""] }]);
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: "",
-            output: ["", `  🔴 Access Denied: ${errorMsg}`, ""]
-          }
-        ]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Access Denied: ${errorMsg}`, ""] }]);
       } finally {
         setAuthState("idle");
         setAuthEmail("");
@@ -513,27 +569,220 @@ const PortfolioCLI = ({
     const trimmedCmd = trimmedInput.toLowerCase();
     if (!trimmedCmd) return;
 
-    setCommandHistory((prev) => [...prev, trimmedCmd]);
+    setCommandHistory((prev) => [...prev, trimmedInput]);
     setHistoryIndex(-1);
+
+    const currentUserPrompt = sshSession
+      ? `${sshSession.user}@${sshSession.host}`
+      : currentUser
+      ? "admin@karan"
+      : "dev@karan";
+
+    // SSH Execution
+    if (trimmedCmd.startsWith("ssh ")) {
+      const targetStr = trimmedInput.slice(4).trim();
+      let user = "guest";
+      let host = targetStr;
+
+      if (targetStr.includes("@")) {
+        const parts = targetStr.split("@");
+        user = parts[0] || "guest";
+        host = parts[1] || "karan-server";
+      }
+
+      setSshSession({ isConnected: true, host, user });
+      const bannerLines = getSSHBanner(host, user);
+      setHistory((prev) => [...prev, { command: cmd, output: bannerLines, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "exit" || trimmedCmd === "logout") {
+      if (sshSession) {
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: cmd,
+            output: ["", `  Connection to ${sshSession.host} closed by remote host.`, "  Returned to local terminal session.", ""],
+            cwd: currentDir,
+            userPrompt: currentUserPrompt,
+          },
+        ]);
+        setSshSession(null);
+        return;
+      }
+    }
+
+    // Process Monitor
+    if (trimmedCmd === "top" || trimmedCmd === "htop") {
+      setActiveView("top");
+      setHistory((prev) => [...prev, { command: cmd, output: ["  Launching live process monitor 'top'... (Press 'q' or Esc to exit)"], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    // Network & Diagnostics
+    if (trimmedCmd.startsWith("ping ")) {
+      const host = trimmedInput.slice(5).trim();
+      const pingOutput = executePing(host);
+      setHistory((prev) => [...prev, { command: cmd, output: pingOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "df" || trimmedCmd === "df -h") {
+      setHistory((prev) => [...prev, { command: cmd, output: executeDf(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "free" || trimmedCmd === "free -m") {
+      setHistory((prev) => [...prev, { command: cmd, output: executeFree(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "netstat" || trimmedCmd === "netstat -tuln") {
+      setHistory((prev) => [...prev, { command: cmd, output: executeNetstat(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    // Themes
+    if (trimmedCmd.startsWith("theme")) {
+      const sub = trimmedCmd.slice(5).trim();
+      if (!sub || sub === "list") {
+        setHistory((prev) => [
+          ...prev,
+          {
+            command: cmd,
+            output: [
+              "",
+              "  🎨 AVAILABLE TERMINAL THEMES:",
+              "    • default   - Dark sleek theme",
+              "    • matrix    - Classic green matrix glow",
+              "    • dracula   - Vibrant purple Dracula palette",
+              "    • cyberpunk - High contrast cyan & neon yellow",
+              "    • ubuntu    - Classic Ubuntu terminal aubergine",
+              "",
+              "  Usage: theme set [name] (e.g. theme set dracula)",
+              "",
+            ],
+            cwd: currentDir,
+            userPrompt: currentUserPrompt,
+          },
+        ]);
+        return;
+      }
+
+      if (sub.startsWith("set ")) {
+        const tName = sub.slice(4).trim().toLowerCase();
+        if (themes[tName]) {
+          setThemeName(tName);
+          saveTheme(tName);
+          setHistory((prev) => [...prev, { command: cmd, output: ["", `  🎨 Theme switched to '${tName}'!`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        } else {
+          setHistory((prev) => [...prev, { command: cmd, output: ["", `  Error: Theme '${tName}' not found. Type 'theme' to view options.`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        }
+        return;
+      }
+    }
+
+    // VFS Commands
+    if (trimmedCmd === "pwd") {
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  ${currentDir}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd === "ls" || trimmedCmd.startsWith("ls ")) {
+      const args = trimmedCmd.split(/\s+/).slice(1);
+      let showAll = false;
+      let showLong = false;
+      let targetPath = "";
+
+      for (const arg of args) {
+        if (arg.startsWith("-")) {
+          if (arg.includes("a")) showAll = true;
+          if (arg.includes("l")) showLong = true;
+        } else {
+          targetPath = arg;
+        }
+      }
+
+      const lines = formatLsOutput(vfs, currentDir, targetPath, showAll, showLong);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", ...lines, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("mkdir ")) {
+      const dirName = trimmedInput.slice(6).trim();
+      const res = executeMkdir(vfs, currentDir, dirName, sshSession ? sshSession.user : "karan");
+      if (res.updatedRoot) setVfs(res.updatedRoot);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("touch ")) {
+      const fileName = trimmedInput.slice(6).trim();
+      const res = executeTouch(vfs, currentDir, fileName, sshSession ? sshSession.user : "karan");
+      if (res.updatedRoot) setVfs(res.updatedRoot);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("rm ")) {
+      const rest = trimmedCmd.slice(3).trim();
+      const isRecursive = rest.startsWith("-r ") || rest.startsWith("-rf ");
+      const targetName = isRecursive ? rest.replace(/^-r[f]?\s+/, "") : rest;
+
+      const res = executeRm(vfs, currentDir, targetName, isRecursive);
+      if (res.updatedRoot) setVfs(res.updatedRoot);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      return;
+    }
+
+    if (trimmedCmd.startsWith("cat ")) {
+      const fileName = trimmedInput.slice(4).trim();
+      if (fileName.toLowerCase() === "readme.md" || fileName.toLowerCase() === "readme") {
+        setHistory((prev) => [...prev, { command: cmd, output: readmeOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      } else if (fileName.toLowerCase() === "resume" || fileName.toLowerCase() === "resume.pdf") {
+        setHistory((prev) => [...prev, { command: cmd, output: resumeTextOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      } else {
+        const lines = executeCat(vfs, currentDir, fileName);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", ...lines, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      }
+      return;
+    }
+
+    // Redirect writing: echo "text" > file or echo "text" >> file
+    if (trimmedCmd.includes(">")) {
+      const isAppend = trimmedCmd.includes(">>");
+      const parts = trimmedInput.split(isAppend ? ">>" : ">");
+      let rawText = parts[0].trim();
+      if (rawText.toLowerCase().startsWith("echo ")) rawText = rawText.slice(5).trim();
+      rawText = rawText.replace(/^["']|["']$/g, "");
+      const filePath = parts[1].trim();
+
+      if (filePath) {
+        const res = executeWriteFile(vfs, currentDir, filePath, rawText, isAppend, sshSession ? sshSession.user : "karan");
+        if (res.updatedRoot) setVfs(res.updatedRoot);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        return;
+      }
+    }
 
     if (trimmedCmd === "clear") { setHistory([]); return; }
     if (trimmedCmd === "help" || trimmedCmd === "?") {
-      setHistory((prev) => [...prev, { command: cmd, output: helpList }]);
+      setHistory((prev) => [...prev, { command: cmd, output: helpList, cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
     if (trimmedCmd === "tree") {
-      setHistory((prev) => [...prev, { command: cmd, output: treeOutput }]);
+      setHistory((prev) => [...prev, { command: cmd, output: treeOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
     if (trimmedCmd === "shortcuts" || trimmedCmd === "keys") {
-      setHistory((prev) => [...prev, { command: cmd, output: shortcutsOutput }]);
+      setHistory((prev) => [...prev, { command: cmd, output: shortcutsOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
     if (trimmedCmd === "time" || trimmedCmd === "tz") {
-      setHistory((prev) => [...prev, { command: cmd, output: getTimezoneOutput() }]);
+      setHistory((prev) => [...prev, { command: cmd, output: getTimezoneOutput(), cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
@@ -543,7 +792,7 @@ const PortfolioCLI = ({
     }
 
     if (trimmedCmd === "experience" || trimmedCmd === "work") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching work experience from database..."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching work experience from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
       try {
         const { data, error } = await supabase
           .from("experience")
@@ -551,7 +800,7 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No work experience records found in database.", ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No work experience records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
           const lines = ["", "  💼 WORK EXPERIENCE (from Supabase DB)", "  ==========================================="];
           data.forEach((item, idx) => {
@@ -560,23 +809,21 @@ const PortfolioCLI = ({
               `      Duration : ${item.duration}`
             );
             if (Array.isArray(item.highlights) && item.highlights.length > 0) {
-              item.highlights.forEach((h: string) => {
-                lines.push(`      • ${h}`);
-              });
+              item.highlights.forEach((h: string) => lines.push(`      • ${h}`));
             }
             lines.push("");
           });
-          setHistory((prev) => [...prev, { command: "", output: lines }]);
+          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching experience: ${msg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching experience: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
 
     if (trimmedCmd === "education") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching education details from database..."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching education details from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
       try {
         const { data, error } = await supabase
           .from("education")
@@ -584,7 +831,7 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No education records found in database.", ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No education records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
           const lines = ["", "  🎓 EDUCATION HISTORY (from Supabase DB)", "  ==========================================="];
           data.forEach((item, idx) => {
@@ -595,17 +842,17 @@ const PortfolioCLI = ({
               ""
             );
           });
-          setHistory((prev) => [...prev, { command: "", output: lines }]);
+          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching education: ${msg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching education: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
 
     if (trimmedCmd === "certifications" || trimmedCmd === "certs") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching certifications from database..."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching certifications from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
       try {
         const { data, error } = await supabase
           .from("certifications")
@@ -613,24 +860,22 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No certification records found in database.", ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No certification records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
           const lines = ["", "  📜 CERTIFICATIONS (from Supabase DB)", "  ==========================================="];
-          data.forEach((item) => {
-            lines.push(`    🏆 ${item.name}`);
-          });
+          data.forEach((item) => lines.push(`    🏆 ${item.name}`));
           lines.push("");
-          setHistory((prev) => [...prev, { command: "", output: lines }]);
+          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching certifications: ${msg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching certifications: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
 
     if (trimmedCmd === "projects") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching all projects from database..."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching all projects from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
       try {
         const { data, error } = await supabase
           .from("projects")
@@ -638,7 +883,7 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No projects found in database.", ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", "  No projects found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
           const lines = ["", "  🚀 FEATURED PROJECTS (from Supabase DB)", "  ==========================================="];
           data.forEach((p, idx) => {
@@ -654,11 +899,11 @@ const PortfolioCLI = ({
           });
           lines.push("  💡 Tip: Type 'open projects' to open projects page in browser.");
           lines.push("");
-          setHistory((prev) => [...prev, { command: "", output: lines }]);
+          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching projects: ${msg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching projects: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
@@ -666,10 +911,10 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("search ")) {
       const queryTerm = cmd.slice(7).trim();
       if (!queryTerm) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: search [term] (e.g. search React, search Engineering)", ""] }]);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: search [term] (e.g. search React, search Engineering)", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         return;
       }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Searching database for "${queryTerm}"...`] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Searching database for "${queryTerm}"...`], cwd: currentDir, userPrompt: currentUserPrompt }]);
       try {
         const [projRes, expRes, eduRes, certRes] = await Promise.all([
           supabase.from("projects").select("*").or(`title.ilike.%${queryTerm}%,description.ilike.%${queryTerm}%,role.ilike.%${queryTerm}%`),
@@ -718,13 +963,13 @@ const PortfolioCLI = ({
         }
 
         if (count === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", `  No matching records found across database for "${queryTerm}".`, ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", `  No matching records found across database for "${queryTerm}".`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
-          setHistory((prev) => [...prev, { command: "", output: results }]);
+          setHistory((prev) => [...prev, { command: "", output: results, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error searching database: ${msg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error searching database: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
@@ -732,23 +977,7 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("calc ")) {
       const expr = cmd.slice(5);
       const res = evaluateMath(expr);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", res, ""] }]);
-      return;
-    }
-
-    if (trimmedCmd.startsWith("cat ")) {
-      const filename = trimmedCmd.slice(4).trim().toLowerCase();
-      if (filename === "readme.md" || filename === "readme" || filename === "bio") {
-        setHistory((prev) => [...prev, { command: cmd, output: readmeOutput }]);
-      } else if (filename === "resume" || filename === "resume.pdf") {
-        setHistory((prev) => [...prev, { command: cmd, output: resumeTextOutput }]);
-      } else if (filename === "contact") {
-        setHistory((prev) => [...prev, { command: cmd, output: commandsInfo.contact as string[] }]);
-      } else if (filename === "skills") {
-        setHistory((prev) => [...prev, { command: cmd, output: commandsInfo.skills as string[] }]);
-      } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  cat: ${filename}: No such file. Try 'cat README.md' or 'cat resume'`, ""] }]);
-      }
+      setHistory((prev) => [...prev, { command: cmd, output: ["", res, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
@@ -763,17 +992,19 @@ const PortfolioCLI = ({
       return;
     }
 
-    if (trimmedCmd.startsWith("cd")) {
-      const target = cmd.slice(2);
+    if (trimmedCmd.startsWith("cd ")) {
+      const target = cmd.slice(3);
       handleOpenOrCd(target, true);
       return;
     }
 
     if (trimmedCmd === "whoami" || trimmedCmd === "sudo whoami") {
-      if (currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: admin`, `  Email: ${currentUser.email}`, `  Role: authenticated`, ""] }]);
+      if (sshSession) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: ${sshSession.user}`, `  Host: ${sshSession.host}`, `  Session: SSH Remote Session`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      } else if (currentUser) {
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: admin`, `  Email: ${currentUser.email}`, `  Role: authenticated`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: guest`, `  Role: anonymous`, ""] }]);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: guest`, `  Role: anonymous`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
@@ -781,26 +1012,26 @@ const PortfolioCLI = ({
     if (trimmedCmd === "fetch" || trimmedCmd === "neofetch") {
       const fetchOutput = [
         "",
-        "  ⚡ karan@portfolio-os ⚡",
+        `  ⚡ karan@${sshSession ? sshSession.host : "portfolio-os"} ⚡`,
         "  -----------------------",
-        "  OS       → PortfolioOS v2.0 (Web/Linux)",
+        "  OS       → PortfolioOS v2.5 (Virtual Linux Kernel)",
         "  Host     → karangholap.com",
-        "  Kernel   → React 18 + Vite 5 + TypeScript",
+        "  Kernel   → React 18 + Vite 5 + Virtual OS Engine",
         "  Uptime   → 24/7 (Vercel CDN)",
-        "  Shell    → portfolio-cli v2.0",
+        "  Shell    → portfolio-cli v2.5 (VFS + SSH + POSIX)",
         "  Role     → Software Developer @ CandorWorks",
         "  Founder  → Private Academy Engineering",
         "  Location → Pune, India (UTC +5:30) 📍",
         "  Stack    → React, Node.js, TypeScript, Tailwind, Supabase",
         "",
       ];
-      setHistory((prev) => [...prev, { command: cmd, output: fetchOutput }]);
+      setHistory((prev) => [...prev, { command: cmd, output: fetchOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
     if (trimmedCmd.startsWith("echo ")) {
       const msg = cmd.slice(5);
-      setHistory((prev) => [...prev, { command: cmd, output: [msg || ""] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: [msg || ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
@@ -818,6 +1049,8 @@ const PortfolioCLI = ({
             "  (Press Escape at any time to cancel)",
             "",
           ],
+          cwd: currentDir,
+          userPrompt: currentUserPrompt,
         },
       ]);
       setSendState("awaiting_name");
@@ -826,38 +1059,21 @@ const PortfolioCLI = ({
 
     if (trimmedCmd === "sudo" || trimmedCmd === "login" || trimmedCmd === "admin") {
       if (currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Already authenticated as: ${currentUser.email}`, ""] }]);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Already authenticated as: ${currentUser.email}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         return;
       }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Starting Admin Authentication Flow...", "  Press Escape at any time to cancel.", ""] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Starting Admin Authentication Flow...", "  Press Escape at any time to cancel.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       setAuthState("awaiting_email");
-      return;
-    }
-
-    if (trimmedCmd === "logout") {
-      if (!currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Already logged out.", ""] }]);
-        return;
-      }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Logging out..."] }]);
-      try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        setHistory((prev) => [...prev, { command: "", output: ["", "  Logged out successfully. Goodbye!", ""] }]);
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error during signout: ${errorMsg}`, ""] }]);
-      }
       return;
     }
 
     if (trimmedCmd === "sudo messages" || trimmedCmd === "messages") {
       if (!currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Permission Denied: You must be logged in as admin to view messages.", "  Type 'sudo' or 'login' to authenticate.", ""] }]);
+        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Permission Denied: You must be logged in as admin to view messages.", "  Type 'sudo' or 'login' to authenticate.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         return;
       }
 
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Reading contact messages from database..."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Reading contact messages from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
 
       try {
         const { data, error } = await supabase
@@ -865,11 +1081,11 @@ const PortfolioCLI = ({
           .select("*")
           .order("created_at", { ascending: false })
           .limit(5);
-        
+
         if (error) throw error;
-        
+
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  Inbox is empty.", ""] }]);
+          setHistory((prev) => [...prev, { command: "", output: ["", "  Inbox is empty.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
         } else {
           const lines = ["", "  --- RECENT SUBMISSIONS (Last 5) ---", ""];
           data.forEach((msg, idx) => {
@@ -881,130 +1097,57 @@ const PortfolioCLI = ({
               ""
             );
           });
-          setHistory((prev) => [...prev, { command: "", output: lines }]);
+          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${errorMsg}`, ""] }]);
-      }
-      return;
-    }
-
-    if (trimmedCmd === "ls" || trimmedCmd === "dir") {
-      const lsOutput = [
-        "",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 home/",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 projects/",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 resume/",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 contact/",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 gallery/",
-        "  drwxr-xr-x  2 karan staff  256 Sep  2 00:59 private-academy/",
-        "  -rw-r--r--  1 karan staff 2555 Sep  2 00:59 README.md",
-        "  -rw-r--r--  1 karan staff  408 Sep  2 00:59 resume.pdf",
-        "",
-        "  💡 Tip: Type 'cd [directory]' to navigate or 'cat README.md' to view.",
-        "",
-      ];
-      setHistory((prev) => [...prev, { command: cmd, output: lsOutput }]);
-      return;
-    }
-
-    if (trimmedCmd.startsWith("skills search ")) {
-      const term = trimmedCmd.slice(14).trim();
-      if (!term) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: skills search [term]", ""] }]);
-        return;
-      }
-      const skillsList = [
-        "React.js", "Next.js", "HTML5", "CSS3", "JavaScript", "TypeScript", "Tailwind CSS", "Bootstrap", "Shadcn UI",
-        "Node.js", "Express.js", "Python", "Flask", "PostgreSQL", "MySQL", "MongoDB", "Supabase",
-        "Git", "GitHub", "Figma", "JIRA", "AWS", "Vercel", "Netlify", "VS Code", "Postman", "WordPress"
-      ];
-      const matches = skillsList.filter(s => s.toLowerCase().includes(term));
-      if (matches.length > 0) {
-        setHistory((prev) => [...prev, { 
-          command: cmd, 
-          output: ["", `  Found matching skills for "${term}":`, "", ...matches.map(m => `    • ${m}`), ""] 
-        }]);
-      } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  No matching skills found for "${term}"`, ""] }]);
-      }
-      return;
-    }
-
-    if (trimmedCmd.startsWith("projects filter ")) {
-      const type = trimmedCmd.slice(16).trim();
-      if (type !== "web" && type !== "mobile") {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: projects filter [web|mobile]", ""] }]);
-        return;
-      }
-
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Fetching ${type} projects from database...`] }]);
-
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("type", type)
-          .order("order", { ascending: true });
-        
-        if (error) throw error;
-        
-        if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", `  No ${type} projects found.`, ""] }]);
-        } else {
-          setHistory((prev) => [...prev, { 
-            command: "", 
-            output: [
-              "",
-              ...data.map((p, idx) => `  ${idx + 1}. ${p.title} (${p.role})\n     → ${p.description}`),
-              ""
-            ] 
-          }]);
-        }
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error fetching projects: ${errorMsg}`, ""] }]);
+        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${errorMsg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
       }
       return;
     }
 
     const output = commandsInfo[trimmedCmd];
     if (output) {
-      setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output], cwd: currentDir, userPrompt: currentUserPrompt }]);
     } else {
-      setHistory((prev) => [...prev, { command: cmd, output: [`Command not found: ${cmd}`, "Type 'help' to see available commands."] }]);
+      setHistory((prev) => [...prev, { command: cmd, output: [`Command not found: ${cmd}`, "Type 'help' to see available commands."], cwd: currentDir, userPrompt: currentUserPrompt }]);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (activeView === "top") {
+      if (e.key === "q" || e.key === "Escape") {
+        e.preventDefault();
+        setActiveView("terminal");
+      }
+      return;
+    }
+
     if (e.key === "Tab" || (e.key === "ArrowRight" && ghostSuggestion && inputRef.current?.selectionStart === input.length)) {
       e.preventDefault();
       if (authState !== "idle" || !input.trim()) return;
 
       const query = input.toLowerCase().trim();
-      const matches = availableCommands.filter((c) => c.startsWith(query));
+      const matches = availableCommands.filter((c) => c.toLowerCase().startsWith(query));
 
       if (matches.length === 1) {
         setInput(matches[0]);
       } else if (matches.length > 1) {
         let commonPrefix = matches[0];
         for (let i = 1; i < matches.length; i++) {
-          while (!matches[i].startsWith(commonPrefix)) {
+          while (!matches[i].toLowerCase().startsWith(commonPrefix.toLowerCase())) {
             commonPrefix = commonPrefix.slice(0, -1);
           }
         }
         if (commonPrefix.length > query.length) {
           setInput(commonPrefix);
         } else {
-          setHistory((prev) => [
-            ...prev,
-            { command: input, output: ["Matches: " + matches.join("  |  ")] }
-          ]);
+          setHistory((prev) => [...prev, { command: input, output: ["Matches: " + matches.join("  |  ")] }]);
         }
       }
       return;
     }
+
     if (e.key === "Escape") {
       if (sendState !== "idle") {
         e.preventDefault();
@@ -1023,6 +1166,7 @@ const PortfolioCLI = ({
         return;
       }
     }
+
     if (e.key === "Enter") {
       handleCommand(input);
       setInput("");
@@ -1065,6 +1209,8 @@ const PortfolioCLI = ({
 
   const handleFullscreen = () => setIsFullscreen(!isFullscreen);
 
+  const topData = generateTopData(topTick);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -1092,13 +1238,13 @@ const PortfolioCLI = ({
             borderRadius: isFullscreen ? "0px" : "12px",
           }}
           transition={{ duration: 0.4, type: "spring", damping: 25, stiffness: 300 }}
-          className={`w-full overflow-hidden border border-border shadow-2xl hover:shadow-[0_25px_50px_-12px_rgba(175,100%,50%,0.1)] transition-shadow duration-300 ${
+          className={`w-full overflow-hidden border shadow-2xl transition-all duration-300 ${
             isFullscreen ? "rounded-none" : "rounded-xl"
           }`}
           style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
         >
           {/* Terminal Header */}
-          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-[hsl(0,0%,12%)] border-b border-border">
+          <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b ${theme.header}`}>
             <div className="flex gap-1.5 sm:gap-2">
               <motion.button
                 onClick={handleClose}
@@ -1139,7 +1285,11 @@ const PortfolioCLI = ({
               transition={{ delay: 0.2, duration: 0.3 }}
               className="flex-1 text-center"
             >
-              <span className="text-xs sm:text-sm text-[hsl(0,0%,60%)]">karan@portfolio:~</span>
+              <span className={`text-xs sm:text-sm font-semibold ${theme.text}`}>
+                {sshSession
+                  ? `${sshSession.user}@${sshSession.host}:${currentDir}`
+                  : `karan@portfolio:${currentDir}`}
+              </span>
             </motion.div>
           </div>
 
@@ -1151,133 +1301,218 @@ const PortfolioCLI = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.4 }}
-            className={`bg-[hsl(0,0%,6%)] p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
+            className={`${theme.bg} ${theme.text} p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
               isFullscreen
                 ? "h-[calc(100vh-48px)]"
                 : "h-[75vh] sm:h-[75vh] md:h-[60vh] lg:h-[500px]"
             }`}
           >
-            {/* Welcome Message & Session Date/Time */}
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-              <p className="text-[hsl(0,0%,90%)] font-semibold mb-1 text-xs sm:text-sm flex items-center gap-2">
-                <span>Welcome to Portfolio CLI v2.0</span>
-                <span className="text-[hsl(175,100%,50%)]">⚡</span>
-              </p>
-              <p className="text-[hsl(0,0%,50%)] mb-3 text-xs">
-                Session started: {sessionStartTime}
-              </p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
-              <p className="text-[hsl(0,0%,70%)] mb-3 sm:mb-4 text-xs sm:text-sm">
-                Type '<span className="text-[hsl(0,0%,95%)]">help</span>' or '
-                <span className="text-[hsl(0,0%,95%)]">?</span>' to list all commands.
-              </p>
-            </motion.div>
-
-            {/* Command History */}
-            <AnimatePresence mode="popLayout">
-              {history.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: "auto" }}
-                  exit={{ opacity: 0, y: -10, height: 0 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="mb-2 sm:mb-3 overflow-hidden"
-                >
-                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                    <span className="text-[hsl(142,70%,55%)]">dev@karan</span>
-                    <span className="text-[hsl(0,0%,50%)]">~</span>
-                    <span className="text-[hsl(0,0%,50%)]">$</span>
-                    <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-[hsl(0,0%,95%)]"
-                    >
-                      {item.command}
-                    </motion.span>
-                  </div>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1, duration: 0.3 }}
-                    className="mt-1 text-[hsl(0,0%,70%)]"
-                  >
-                    <AnimatePresence>
-                      {item.output.map((line, lineIndex) => (
-                        <motion.div
-                          key={lineIndex}
-                          initial={{ opacity: 0, x: -5 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -5 }}
-                          transition={{ delay: lineIndex * 0.03, duration: 0.2 }}
-                          className="whitespace-pre overflow-x-auto"
-                        >
-                          {line || "\u00A0"}
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </motion.div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {/* Current Input Line */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.3 }}
-              className="flex items-center gap-1 sm:gap-2 flex-wrap w-full"
-            >
-              {sendState === "awaiting_name" ? (
-                <span className="text-[hsl(175,100%,50%)] font-medium">Step 1/4 (Your Name):</span>
-              ) : sendState === "awaiting_email" ? (
-                <span className="text-[hsl(175,100%,50%)] font-medium">Step 2/4 (Your Email):</span>
-              ) : sendState === "awaiting_subject" ? (
-                <span className="text-[hsl(175,100%,50%)] font-medium">Step 3/4 (Subject):</span>
-              ) : sendState === "awaiting_message" ? (
-                <span className="text-[hsl(175,100%,50%)] font-medium">Step 4/4 (Message):</span>
-              ) : sendState === "submitting" ? (
-                <span className="text-muted-foreground animate-pulse">Delivering message...</span>
-              ) : authState === "awaiting_email" ? (
-                <span className="text-[hsl(200,80%,60%)]">Enter Email:</span>
-              ) : authState === "awaiting_password" ? (
-                <span className="text-[hsl(200,80%,60%)]">Enter Password:</span>
-              ) : authState === "authenticating" ? (
-                <span className="text-muted-foreground animate-pulse">Authenticating...</span>
-              ) : (
-                <>
-                  <span className="text-[hsl(142,70%,55%)]">
-                    {currentUser ? "admin@karan" : "dev@karan"}
-                  </span>
-                  <span className="text-[hsl(0,0%,50%)]">~</span>
-                  <span className="text-[hsl(0,0%,50%)]">{currentUser ? "#" : "$"}</span>
-                </>
-              )}
-              
-              {authState !== "authenticating" && sendState !== "submitting" && (
-                <div className="relative flex-1 min-w-[150px] flex items-center">
-                  <input
-                    ref={inputRef}
-                    type={authState === "awaiting_password" ? "password" : "text"}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="w-full bg-transparent outline-none text-[hsl(0,0%,95%)] caret-[hsl(0,0%,95%)] transition-all z-10 font-mono"
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
-                  {ghostSuggestion && (
-                    <span className="absolute left-0 pointer-events-none text-[hsl(0,0%,45%)] whitespace-pre select-none z-0 font-mono">
-                      <span className="opacity-0">{input}</span>
-                      {ghostSuggestion}
-                    </span>
-                  )}
+            {activeView === "top" ? (
+              /* Dynamic Live TOP / HTOP Process Monitor Screen */
+              <div className="font-mono text-xs select-none">
+                <div className="flex justify-between items-center border-b border-white/20 pb-2 mb-2">
+                  <span className="font-bold text-amber-400">top - {topData.uptimeStr}</span>
+                  <span className="text-emerald-400 animate-pulse">● LIVE (Press 'q' or Esc to exit)</span>
                 </div>
-              )}
-            </motion.div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <p>Tasks: <span className="font-bold text-white">{topData.tasksCount}</span> total, <span className="text-emerald-400">{topData.runningCount}</span> running, <span className="text-white/70">{topData.sleepingCount}</span> sleeping</p>
+                    <p>%Cpu(s): <span className="text-cyan-400 font-bold">{topData.cpuVal}%</span> us, 2.1% sy, 0.0% ni, 85.5% id</p>
+                  </div>
+                  <div>
+                    <p>MiB Mem : <span className="text-purple-400 font-bold">{topData.memVal}%</span> used (3840.2 / 16284.0 MB)</p>
+                    <p>Load Avg: <span className="text-yellow-300">{topData.loadAvg}</span></p>
+                  </div>
+                </div>
+
+                {/* Progress bars */}
+                <div className="space-y-1 mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 text-xs">CPU:</span>
+                    <div className="flex-1 bg-white/10 h-3 rounded overflow-hidden">
+                      <div className="bg-cyan-400 h-full transition-all duration-300" style={{ width: `${topData.cpuVal}%` }}></div>
+                    </div>
+                    <span className="w-12 text-right">{topData.cpuVal}%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 text-xs">MEM:</span>
+                    <div className="flex-1 bg-white/10 h-3 rounded overflow-hidden">
+                      <div className="bg-purple-400 h-full transition-all duration-300" style={{ width: `${topData.memVal}%` }}></div>
+                    </div>
+                    <span className="w-12 text-right">{topData.memVal}%</span>
+                  </div>
+                </div>
+
+                {/* Process Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white/10 text-emerald-400 border-b border-white/20">
+                        <th className="py-1 px-2">PID</th>
+                        <th className="py-1 px-2">USER</th>
+                        <th className="py-1 px-2">PR</th>
+                        <th className="py-1 px-2">NI</th>
+                        <th className="py-1 px-2">VIRT</th>
+                        <th className="py-1 px-2">RES</th>
+                        <th className="py-1 px-2">%CPU</th>
+                        <th className="py-1 px-2">%MEM</th>
+                        <th className="py-1 px-2">TIME+</th>
+                        <th className="py-1 px-2">COMMAND</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topData.processes.map((proc) => (
+                        <tr key={proc.pid} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-1 px-2 text-cyan-300">{proc.pid}</td>
+                          <td className="py-1 px-2">{proc.user}</td>
+                          <td className="py-1 px-2">{proc.pr}</td>
+                          <td className="py-1 px-2">{proc.ni}</td>
+                          <td className="py-1 px-2">{proc.virt}</td>
+                          <td className="py-1 px-2">{proc.res}</td>
+                          <td className="py-1 px-2 font-bold text-amber-300">{proc.cpu.toFixed(1)}</td>
+                          <td className="py-1 px-2 text-purple-300">{proc.mem.toFixed(1)}</td>
+                          <td className="py-1 px-2">{proc.time}</td>
+                          <td className="py-1 px-2 font-semibold">{proc.command}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              /* Standard Terminal Shell Output */
+              <>
+                {/* Welcome Message & Session Date/Time */}
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
+                  <p className="font-semibold mb-1 text-xs sm:text-sm flex items-center gap-2">
+                    <span>Welcome to Portfolio CLI v2.5 (Virtual OS & SSH Engine)</span>
+                    <span className={theme.accent}>⚡</span>
+                  </p>
+                  <p className="opacity-60 mb-3 text-xs">
+                    Session started: {sessionStartTime}
+                  </p>
+                </motion.div>
+                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
+                  <p className="opacity-80 mb-3 sm:mb-4 text-xs sm:text-sm">
+                    Type '<span className="font-bold underline">help</span>' for available server commands or '
+                    <span className="font-bold underline">ssh guest@karan-server</span>' to test remote SSH mode.
+                  </p>
+                </motion.div>
+
+                {/* Command History */}
+                <AnimatePresence mode="popLayout">
+                  {history.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: "auto" }}
+                      exit={{ opacity: 0, y: -10, height: 0 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className="mb-2 sm:mb-3 overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                        <span className={theme.prompt}>
+                          {item.userPrompt || (currentUser ? "admin@karan" : "dev@karan")}
+                        </span>
+                        <span className="opacity-50">{item.cwd || "~"}</span>
+                        <span className="opacity-50">$</span>
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                          className="font-bold"
+                        >
+                          {item.command}
+                        </motion.span>
+                      </div>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.1, duration: 0.3 }}
+                        className="mt-1 opacity-90"
+                      >
+                        <AnimatePresence>
+                          {item.output.map((line, lineIndex) => (
+                            <motion.div
+                              key={lineIndex}
+                              initial={{ opacity: 0, x: -5 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -5 }}
+                              transition={{ delay: lineIndex * 0.02, duration: 0.2 }}
+                              className="whitespace-pre overflow-x-auto"
+                            >
+                              {line || "\u00A0"}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {/* Current Input Line */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.3 }}
+                  className="flex items-center gap-1 sm:gap-2 flex-wrap w-full mt-2"
+                >
+                  {sendState === "awaiting_name" ? (
+                    <span className={`${theme.accent} font-medium`}>Step 1/4 (Your Name):</span>
+                  ) : sendState === "awaiting_email" ? (
+                    <span className={`${theme.accent} font-medium`}>Step 2/4 (Your Email):</span>
+                  ) : sendState === "awaiting_subject" ? (
+                    <span className={`${theme.accent} font-medium`}>Step 3/4 (Subject):</span>
+                  ) : sendState === "awaiting_message" ? (
+                    <span className={`${theme.accent} font-medium`}>Step 4/4 (Message):</span>
+                  ) : sendState === "submitting" ? (
+                    <span className="opacity-60 animate-pulse">Delivering message...</span>
+                  ) : authState === "awaiting_email" ? (
+                    <span className="text-cyan-400">Enter Email:</span>
+                  ) : authState === "awaiting_password" ? (
+                    <span className="text-cyan-400">Enter Password:</span>
+                  ) : authState === "authenticating" ? (
+                    <span className="opacity-60 animate-pulse">Authenticating...</span>
+                  ) : (
+                    <>
+                      <span className={theme.prompt}>
+                        {sshSession
+                          ? `${sshSession.user}@${sshSession.host}`
+                          : currentUser
+                          ? "admin@karan"
+                          : "dev@karan"}
+                      </span>
+                      <span className="opacity-50">{currentDir}</span>
+                      <span className="opacity-50">
+                        {sshSession?.user === "root" || currentUser ? "#" : "$"}
+                      </span>
+                    </>
+                  )}
+
+                  {authState !== "authenticating" && sendState !== "submitting" && (
+                    <div className="relative flex-1 min-w-[150px] flex items-center">
+                      <input
+                        ref={inputRef}
+                        type={authState === "awaiting_password" ? "password" : "text"}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="w-full bg-transparent outline-none caret-current transition-all z-10 font-mono"
+                        spellCheck={false}
+                        autoComplete="off"
+                      />
+                      {ghostSuggestion && (
+                        <span className="absolute left-0 pointer-events-none opacity-40 whitespace-pre select-none z-0 font-mono">
+                          <span className="opacity-0">{input}</span>
+                          {ghostSuggestion}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       </DialogContent>
