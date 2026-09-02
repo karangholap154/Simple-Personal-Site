@@ -117,6 +117,51 @@ const Admin = () => {
     enabled: !!session,
   });
 
+  // Message Mutations
+  const updateMessageStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("contact_messages")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Message status updated" });
+      queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({
+        title: "Failed to update status",
+        description: msg,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("contact_messages")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Message deleted" });
+      queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({
+        title: "Failed to delete message",
+        description: msg,
+        variant: "destructive",
+      });
+    },
+  });
+
   const { data: projects, isLoading: loadingProjects } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
@@ -1027,7 +1072,7 @@ const Admin = () => {
                   <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-sm">Manage Education History</h3>
                     {!showEduForm && (
-                      <Button size="xs" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowEduForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowEduForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Entry
                       </Button>
                     )}
@@ -1088,7 +1133,7 @@ const Admin = () => {
                   <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-sm">Manage Experience</h3>
                     {!showExpForm && (
-                      <Button size="xs" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowExpForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowExpForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Job
                       </Button>
                     )}
@@ -1190,7 +1235,7 @@ const Admin = () => {
                   <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-sm">Manage Certifications</h3>
                     {!showCertForm && (
-                      <Button size="xs" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowCertForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowCertForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Certificate
                       </Button>
                     )}
