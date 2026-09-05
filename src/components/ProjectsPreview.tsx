@@ -43,7 +43,7 @@ const ProjectsPreview = () => {
   return (
     <section className="py-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Featured Projects</h2>
+        <h2 className="text-xl font-serif font-semibold">Featured Projects</h2>
         <Link
           to="/projects"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"

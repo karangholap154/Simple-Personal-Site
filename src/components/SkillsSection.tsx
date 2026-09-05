@@ -107,7 +107,7 @@ const skillVariants = {
 const SkillsSection = () => {
   return (
     <section className="py-8">
-      <h2 className="text-xl font-semibold mb-6">Skills & Technologies</h2>
+      <h2 className="text-xl font-serif font-semibold mb-6">Skills & Technologies</h2>
       <motion.div
         className="flex flex-col gap-4"
         variants={containerVariants}

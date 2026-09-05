@@ -34,7 +34,7 @@ const Index = () => {
                 alt="Karan Gholap"
                 className="w-16 h-16 rounded-full object-cover mb-4 transition-transform duration-300 hover:scale-105"
               />
-              <h1 className="text-2xl font-semibold mb-4">
+              <h1 className="text-2xl sm:text-3xl font-serif font-semibold mb-4 text-foreground">
                 Hey, I'm Karan Gholap <span className="inline-block">👋</span>
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed">
@@ -55,7 +55,7 @@ const Index = () => {
           {/* About Section */}
           <ScrollReveal delay={0.1}>
             <section className="py-8">
-              <h2 className="text-xl font-semibold mb-6">About Me</h2>
+              <h2 className="text-xl font-serif font-semibold mb-6 text-foreground">About Me</h2>
               <p className="text-muted-foreground leading-relaxed">
                 I completed my Bachelor’s degree in Computer Engineering from
                 the University of Mumbai. I specialize in building full-stack
@@ -72,7 +72,7 @@ const Index = () => {
           {/* Professional Work Section */}
           <ScrollReveal delay={0.1}>
             <section className="py-8">
-              <h2 className="text-xl font-semibold mb-6">Professional Work</h2>
+              <h2 className="text-xl font-serif font-semibold mb-6 text-foreground">Professional Work</h2>
 
               <div className="space-y-6 text-muted-foreground leading-relaxed">
                 <p>

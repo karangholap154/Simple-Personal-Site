@@ -117,7 +117,7 @@ const Contact = () => {
           <Navigation />
         
           <section className="py-8">
-            <h1 className="text-2xl font-semibold mb-4">Contact</h1>
+            <h1 className="text-2xl font-serif font-semibold mb-4">Contact</h1>
             <p className="text-muted-foreground mb-8">
               I'm always open to discussing new opportunities, collaborations, or just having a chat about tech. Feel free to reach out!
             </p>

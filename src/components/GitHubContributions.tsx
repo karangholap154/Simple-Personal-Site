@@ -52,7 +52,7 @@ const GitHubContributions = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">GitHub Contributions</h2>
+      <h2 className="text-xl font-serif font-semibold">GitHub Contributions</h2>
       
       <div className="overflow-x-auto scrollbar-none">
         <div className="inline-block min-w-full">

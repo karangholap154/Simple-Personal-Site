@@ -19,6 +19,14 @@ export default {
   				'Inter',
   				'system-ui',
   				'sans-serif'
+  			],
+  			mono: [
+  				'"JetBrains Mono"',
+  				'monospace'
+  			],
+  			serif: [
+  				'"EB Garamond"',
+  				'serif'
   			]
   		},
   		colors: {

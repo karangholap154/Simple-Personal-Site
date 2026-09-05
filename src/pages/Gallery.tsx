@@ -187,7 +187,7 @@ const Gallery = () => {
 
           <main className="py-12">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold mb-4">Casual Photography</h1>
+              <h1 className="text-2xl font-serif font-bold mb-4">Casual Photography</h1>
               <p className="text-muted-foreground leading-relaxed">
                 When I’m not developing, I enjoy capturing casual photography
                 with my{" "}

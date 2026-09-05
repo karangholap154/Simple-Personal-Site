@@ -135,7 +135,7 @@ const Resume = () => {
         
           <section className="py-8">
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-              <h1 className="text-2xl font-semibold">Resume</h1>
+              <h1 className="text-2xl font-serif font-semibold">Resume</h1>
               {resumePdfUrl && (
                 <Button
                   asChild

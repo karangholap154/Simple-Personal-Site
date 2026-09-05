@@ -261,7 +261,7 @@ const Projects = () => {
           <Navigation />
 
           <section className="py-8">
-            <h1 className="text-2xl font-semibold mb-4">Projects</h1>
+            <h1 className="text-2xl font-serif font-semibold mb-4">Projects</h1>
             <p className="text-muted-foreground mb-8">
               A categorized collection of web and mobile products I have built,
               with delivery context and outcomes.

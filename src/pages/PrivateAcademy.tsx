@@ -71,7 +71,7 @@ const PrivateAcademy = () => {
           <section className="py-8">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">📚</span>
-              <h1 className="text-2xl font-semibold">Private Academy Engineering</h1>
+              <h1 className="text-2xl font-serif font-semibold">Private Academy Engineering</h1>
             </div>
             <p className="text-lg text-muted-foreground leading-relaxed">
               An EdTech platform empowering Mumbai University engineering students with comprehensive study resources, exam preparation materials, and practical learning tools.
