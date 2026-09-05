@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, X, Volume2, VolumeX } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Terminal as TerminalIcon, X, Volume2, VolumeX } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
+import { Terminal as XTerm } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
+
 import {
   loadVFS,
   saveVFS,
@@ -34,63 +38,63 @@ import {
 } from "@/utils/audioUtils";
 
 const helpList = [
-  "Available Commands (grouped by category):",
+  "\x1b[1mAvailable Commands (grouped by category):\x1b[0m",
   "",
-  "  🖥️ SERVER & SSH EMULATION",
-  "    ssh [user@host]        - SSH into server (e.g. ssh guest@karan-server)",
-  "    exit / logout          - Close active SSH session or exit monitor",
-  "    top / htop             - Interactive real-time process monitor (Press 'q' to exit)",
-  "    ping [host]            - Send ICMP echo requests to host",
-  "    df / df -h             - Display disk filesystem usage",
-  "    free / free -m         - Display memory allocation stats",
-  "    netstat                - Display active server network ports",
+  "  \x1b[1;36m🖥️ SERVER & SSH EMULATION\x1b[0m",
+  "    \x1b[32mssh [user@host]\x1b[0m        - SSH into server (e.g. ssh guest@karan-server)",
+  "    \x1b[32mexit / logout\x1b[0m          - Close active SSH session or exit monitor",
+  "    \x1b[32mtop / htop\x1b[0m             - Interactive real-time process monitor (Press 'q' to exit)",
+  "    \x1b[32mping [host]\x1b[0m            - Send ICMP echo requests to host",
+  "    \x1b[32mdf / df -h\x1b[0m             - Display disk filesystem usage",
+  "    \x1b[32mfree / free -m\x1b[0m         - Display memory allocation stats",
+  "    \x1b[32mnetstat\x1b[0m                - Display active server network ports",
   "",
-  "  📁 VIRTUAL FILESYSTEM (POSIX COMMANDS)",
-  "    pwd                    - Print current working directory",
-  "    ls [-la] [dir]         - List files with detailed permissions & info",
-  "    cd [path]              - Change directory (e.g. cd projects, cd /var/log, cd ..)",
-  "    mkdir [dir]            - Create a new directory in virtual storage",
-  "    touch [file]           - Create or update a file in virtual storage",
-  "    rm [-r] [path]         - Remove a file or directory",
-  "    cat [file]             - Display file contents",
-  "    echo [text] > [file]   - Write text content to a file",
-  "    tree                   - Display full virtual filesystem tree",
+  "  \x1b[1;36m📁 VIRTUAL FILESYSTEM (POSIX COMMANDS)\x1b[0m",
+  "    \x1b[32mpwd\x1b[0m                    - Print current working directory",
+  "    \x1b[32mls [-la] [dir]\x1b[0m         - List files with detailed permissions & info",
+  "    \x1b[32mcd [path]\x1b[0m              - Change directory (e.g. cd projects, cd /var/log, cd ..)",
+  "    \x1b[32mmkdir [dir]\x1b[0m            - Create a new directory in virtual storage",
+  "    \x1b[32mtouch [file]\x1b[0m           - Create or update a file in virtual storage",
+  "    \x1b[32mrm [-r] [path]\x1b[0m         - Remove a file or directory",
+  "    \x1b[32mcat [file]\x1b[0m             - Display file contents",
+  "    \x1b[32mecho [text] > [file]\x1b[0m   - Write text content to a file",
+  "    \x1b[32mtree\x1b[0m                   - Display full virtual filesystem tree",
   "",
-  "  🔊 AUDIO & CUSTOMIZATION",
-  "    sound [on|off|toggle]  - Toggle retro mechanical keypress audio",
-  "    theme set [name]       - Change theme (matrix, dracula, cyberpunk, ubuntu, default)",
+  "  \x1b[1;36m🔊 AUDIO & CUSTOMIZATION\x1b[0m",
+  "    \x1b[32msound [on|off|toggle]\x1b[0m  - Toggle retro mechanical keypress audio",
+  "    \x1b[32mtheme set [name]\x1b[0m       - Change theme (matrix, dracula, cyberpunk, ubuntu, default)",
   "",
-  "  👤 PORTFOLIO INFO (DATABASE DRIVEN)",
-  "    projects               - Fetch all featured projects from database",
-  "    projects filter [type] - Filter projects by 'web' or 'mobile'",
-  "    experience / work      - Fetch work experience & career timeline",
-  "    education              - Fetch education history & degrees",
-  "    certs / certifications - Fetch professional certifications",
-  "    search [term]          - Global multi-table database search",
-  "    skills                 - View technical skills overview",
-  "    skills search [term]   - Search for specific skills",
-  "    about                  - Learn about Karan Gholap",
-  "    contact                - Get contact details",
-  "    social                 - View social media links",
-  "    fetch / neofetch       - Display portfolio system info",
-  "    download               - Download resume PDF",
+  "  \x1b[1;36m👤 PORTFOLIO INFO (DATABASE DRIVEN)\x1b[0m",
+  "    \x1b[32mprojects\x1b[0m               - Fetch all featured projects from database",
+  "    \x1b[32mprojects filter [type]\x1b[0m - Filter projects by 'web' or 'mobile'",
+  "    \x1b[32mexperience / work\x1b[0m      - Fetch work experience & career timeline",
+  "    \x1b[32meducation\x1b[0m              - Fetch education history & degrees",
+  "    \x1b[32mcerts / certifications\x1b[0m - Fetch professional certifications",
+  "    \x1b[32msearch [term]\x1b[0m          - Global multi-table database search",
+  "    \x1b[32mskills\x1b[0m                 - View technical skills overview",
+  "    \x1b[32mskills search [term]\x1b[0m   - Search for specific skills",
+  "    \x1b[32mabout\x1b[0m                  - Learn about Karan Gholap",
+  "    \x1b[32mcontact\x1b[0m                - Get contact details",
+  "    \x1b[32msocial\x1b[0m                 - View social media links",
+  "    \x1b[32mfetch / neofetch\x1b[0m       - Display portfolio system info",
+  "    \x1b[32mdownload\x1b[0m               - Download resume PDF",
   "",
-  "  ⚡ UTILITIES & HELPERS",
-  "    send                   - Launch interactive message wizard to contact Karan",
-  "    time / tz              - Display Pune, India timezone & local time",
-  "    calc [expr]            - Calculate a math expression (e.g. calc 25 * 4)",
-  "    shortcuts              - View CLI keybindings & hotkeys",
-  "    whoami                 - Check current session role (Guest / Admin / SSH)",
-  "    echo [msg]             - Echo text back",
-  "    clear                  - Clear terminal output",
-  "    help                   - Show this help menu",
+  "  \x1b[1;36m⚡ UTILITIES & HELPERS\x1b[0m",
+  "    \x1b[32msend\x1b[0m                   - Launch interactive message wizard to contact Karan",
+  "    \x1b[32mtime / tz\x1b[0m              - Display Pune, India timezone & local time",
+  "    \x1b[32mcalc [expr]\x1b[0m            - Calculate a math expression (e.g. calc 25 * 4)",
+  "    \x1b[32mshortcuts\x1b[0m              - View CLI keybindings & hotkeys",
+  "    \x1b[32mwhoami\x1b[0m                 - Check current session role (Guest / Admin / SSH)",
+  "    \x1b[32mecho [msg]\x1b[0m             - Echo text back",
+  "    \x1b[32mclear\x1b[0m                  - Clear terminal output",
+  "    \x1b[32mhelp\x1b[0m                   - Show this help menu",
   "",
-  "  🔐 ADMIN / AUTHENTICATION",
-  "    sudo / login           - Admin authentication flow",
-  "    logout                 - Sign out from admin session",
-  "    sudo messages          - View contact form submissions (Admin)",
+  "  \x1b[1;36m🔐 ADMIN / AUTHENTICATION\x1b[0m",
+  "    \x1b[32msudo / login\x1b[0m           - Admin authentication flow",
+  "    \x1b[32mlogout\x1b[0m                 - Sign out from admin session",
+  "    \x1b[32msudo messages\x1b[0m          - View contact form submissions (Admin)",
   "",
-  "  💡 Tip: Press [Tab] or [→] for zsh-style ghost auto-complete!",
+  "  \x1b[90m💡 Tip: Press [Tab] or [→] for ghost autocomplete, [Ctrl+L] to clear, [Ctrl+C] to cancel.\x1b[0m",
 ];
 
 const availableCommands = [
@@ -106,35 +110,35 @@ const availableCommands = [
 
 const treeOutput = [
   "",
-  "  / (VFS Root)",
-  "  ├── 📁 home/",
-  "  │   ├── 📁 karan/",
-  "  │   │   ├── 📄 README.md",
-  "  │   │   ├── 📄 resume.pdf",
-  "  │   │   ├── 📄 notes.txt",
-  "  │   │   └── 📁 projects/",
-  "  │   │       ├── 📄 private-academy.md",
-  "  │   │       └── 📄 bursana.md",
-  "  │   └── 📁 guest/",
-  "  │       └── 📄 welcome.txt",
-  "  ├── 📁 var/",
-  "  │   └── 📁 log/",
-  "  │       ├── 📄 syslog",
-  "  │       └── 📄 auth.log",
-  "  ├── 📁 etc/",
-  "  │   ├── 📄 hostname",
-  "  │   └── 📄 os-release",
-  "  └── 📁 tmp/",
+  "  \x1b[1;34m/ (VFS Root)\x1b[0m",
+  "  ├── \x1b[1;34mhome/\x1b[0m",
+  "  │   ├── \x1b[1;34mkaran/\x1b[0m",
+  "  │   │   ├── README.md",
+  "  │   │   ├── resume.pdf",
+  "  │   │   ├── notes.txt",
+  "  │   │   └── \x1b[1;34mprojects/\x1b[0m",
+  "  │   │       ├── private-academy.md",
+  "  │   │       └── bursana.md",
+  "  │   └── \x1b[1;34mguest/\x1b[0m",
+  "  │       └── welcome.txt",
+  "  ├── \x1b[1;34mvar/\x1b[0m",
+  "  │   └── \x1b[1;34mlog/\x1b[0m",
+  "  │       ├── syslog",
+  "  │       └── auth.log",
+  "  ├── \x1b[1;34metc/\x1b[0m",
+  "  │   ├── hostname",
+  "  │   └── os-release",
+  "  └── \x1b[1;34mtmp/\x1b[0m",
   "",
-  "  💡 Tip: Use 'cd [path]' to navigate directories and 'cat [file]' to view files.",
+  "  \x1b[90m💡 Tip: Use 'cd [path]' to navigate directories and 'cat [file]' to view files.\x1b[0m",
   "",
 ];
 
 const readmeOutput = [
   "",
-  "  =======================================================",
-  "  📄 README.md — Karan Gholap Portfolio System",
-  "  =======================================================",
+  "  \x1b[1;36m=======================================================\x1b[0m",
+  "  \x1b[1m📄 README.md — Karan Gholap Portfolio System\x1b[0m",
+  "  \x1b[1;36m=======================================================\x1b[0m",
   "",
   "  👋 Hello! I'm Karan Gholap",
   "  Software Developer based in Pune, India 🇮🇳",
@@ -145,21 +149,21 @@ const readmeOutput = [
   "  🌟 Founder    : Private Academy Engineering",
   "",
   "  Useful database commands:",
-  "    • Type 'experience' to view career history",
-  "    • Type 'projects' to fetch all projects from DB",
-  "    • Type 'education' to view degree details",
-  "    • Type 'search [term]' for global search",
-  "    • Type 'send' to drop a direct message",
-  "    • Type 'download' to save my resume",
-  "    • Type 'ssh guest@karan-server' for server mode",
-  "    • Type 'sound on' for mechanical key audio",
+  "    • Type '\x1b[32mexperience\x1b[0m' to view career history",
+  "    • Type '\x1b[32mprojects\x1b[0m' to fetch all projects from DB",
+  "    • Type '\x1b[32meducation\x1b[0m' to view degree details",
+  "    • Type '\x1b[32msearch [term]\x1b[0m' for global search",
+  "    • Type '\x1b[32msend\x1b[0m' to drop a direct message",
+  "    • Type '\x1b[32mdownload\x1b[0m' to save my resume",
+  "    • Type '\x1b[32mssh guest@karan-server\x1b[0m' for server mode",
+  "    • Type '\x1b[32msound on\x1b[0m' for mechanical key audio",
   "",
 ];
 
 const resumeTextOutput = [
   "",
-  "  📄 Karan Gholap — Resume Overview",
-  "  =======================================================",
+  "  \x1b[1m📄 Karan Gholap — Resume Overview\x1b[0m",
+  "  \x1b[1;36m=======================================================\x1b[0m",
   "",
   "  🎓 EDUCATION:",
   "    • Bachelor of Engineering (Computer Engineering)",
@@ -183,13 +187,14 @@ const resumeTextOutput = [
 
 const shortcutsOutput = [
   "",
-  "  ⌨️ TERMINAL KEYBINDINGS & SHORTCUTS",
-  "  =======================================================",
+  "  \x1b[1m⌨️ TERMINAL KEYBINDINGS & SHORTCUTS\x1b[0m",
+  "  \x1b[1;36m=======================================================\x1b[0m",
   "    Tab / →     : Autocomplete command / ghost suggestion",
   "    ↑ / ↓       : Cycle through input command history",
-  "    Esc         : Cancel active contact/login wizard or exit top monitor",
+  "    Esc         : Cancel active wizard or exit top monitor",
   "    q           : Exit live 'top' / 'htop' process monitor",
-  "    Ctrl + K    : Open global site-wide Command Palette",
+  "    Ctrl + C    : Cancel current input line",
+  "    Ctrl + L    : Clear terminal screen",
   "    clear       : Clear all output text",
   "",
 ];
@@ -198,15 +203,15 @@ const evaluateMath = (expr: string): string => {
   try {
     const cleanExpr = expr.replace(/\^/g, "**").trim();
     if (!/^[0-9+\-*/%.()\s**]+$/.test(cleanExpr)) {
-      return "  Error: Invalid math expression. Use standard arithmetic (e.g. calc 25 * 4 + 10).";
+      return "  \x1b[31mError: Invalid math expression. Use standard arithmetic (e.g. calc 25 * 4 + 10).\x1b[0m";
     }
     const result = new Function(`"use strict"; return (${cleanExpr})`)();
     if (typeof result === "number" && !isNaN(result)) {
-      return `  Result: ${result}`;
+      return `  \x1b[1;32mResult: ${result}\x1b[0m`;
     }
-    return "  Error: Could not calculate result.";
+    return "  \x1b[31mError: Could not calculate result.\x1b[0m";
   } catch {
-    return "  Error: Invalid syntax in math expression.";
+    return "  \x1b[31mError: Invalid syntax in math expression.\x1b[0m";
   }
 };
 
@@ -227,17 +232,17 @@ const getTimezoneOutput = (): string[] => {
 
   return [
     "",
-    "  🌍 TIME & TIMEZONE INFORMATION",
-    "  =======================================================",
-    `  📍 Karan (Pune, India - IST / UTC+5:30) : ${puneTime}`,
-    `  💻 Your Local Time (${userTz})          : ${localTime}`,
+    "  \x1b[1m🌍 TIME & TIMEZONE INFORMATION\x1b[0m",
+    "  \x1b[1;36m=======================================================\x1b[0m",
+    `  📍 Karan (Pune, India - IST / UTC+5:30) : \x1b[33m${puneTime}\x1b[0m`,
+    `  💻 Your Local Time (${userTz})          : \x1b[36m${localTime}\x1b[0m`,
     "",
   ];
 };
 
 const commandsInfo: Record<string, string | string[]> = {
   about: [
-    "Hi! I'm Karan Gholap 👋",
+    "\x1b[1mHi! I'm Karan Gholap 👋\x1b[0m",
     "",
     "A Software Developer from Pune, India.",
     "I specialize in building responsive, user-friendly applications",
@@ -247,7 +252,7 @@ const commandsInfo: Record<string, string | string[]> = {
     "and Founder and Software Developer of Private Academy Engineering.",
   ],
   skills: [
-    "Technical Skills:",
+    "\x1b[1mTechnical Skills:\x1b[0m",
     "",
     "  Frontend   → React.js, Next.js, TypeScript, Tailwind CSS, Bootstrap",
     "  Backend    → Node.js, Express.js, Python, Flask, REST APIs",
@@ -256,15 +261,15 @@ const commandsInfo: Record<string, string | string[]> = {
     "  Tools      → VS Code, Figma, Postman, JIRA",
   ],
   contact: [
-    "Contact Information:",
+    "\x1b[1mContact Information:\x1b[0m",
     "",
-    "  📧 Email    → karangholap@zohomail.in",
-    "  💼 LinkedIn → linkedin.com/in/karangholap",
-    "  🐙 GitHub   → github.com/karangholap154",
-    "  📸 Instagram→ instagram.com/thekarangholap",
+    "  📧 Email    → \x1b[36mkarangholap@zohomail.in\x1b[0m",
+    "  💼 LinkedIn → \x1b[36mlinkedin.com/in/karangholap\x1b[0m",
+    "  🐙 GitHub   → \x1b[36mgithub.com/karangholap154\x1b[0m",
+    "  📸 Instagram→ \x1b[36minstagram.com/thekarangholap\x1b[0m",
   ],
   social: [
-    "Social Links:",
+    "\x1b[1mSocial Links:\x1b[0m",
     "",
     "  GitHub     → https://github.com/karangholap154",
     "  LinkedIn   → https://linkedin.com/in/karangholap",
@@ -274,13 +279,6 @@ const commandsInfo: Record<string, string | string[]> = {
   ],
 };
 
-interface HistoryItem {
-  command: string;
-  output: string[];
-  cwd?: string;
-  userPrompt?: string;
-}
-
 interface PortfolioCLIProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -288,13 +286,36 @@ interface PortfolioCLIProps {
   onMinimizeChange?: (minimized: boolean) => void;
 }
 
+const xtermThemeMap: Record<string, { background: string; foreground: string; cursor: string; selectionBackground: string }> = {
+  default: { background: "#0f0f0f", foreground: "#f0f0f0", cursor: "#00ffcc", selectionBackground: "#ffffff33" },
+  matrix: { background: "#050B05", foreground: "#00FF66", cursor: "#00FF66", selectionBackground: "#00FF6644" },
+  dracula: { background: "#282a36", foreground: "#f8f8f2", cursor: "#50fa7b", selectionBackground: "#44475a88" },
+  cyberpunk: { background: "#0d0221", foreground: "#00f0ff", cursor: "#ff0055", selectionBackground: "#ff005544" },
+  ubuntu: { background: "#300a24", foreground: "#ffffff", cursor: "#e95420", selectionBackground: "#e9542044" },
+};
+
 const PortfolioCLI = ({
   open,
   onOpenChange,
   onMinimizeChange,
 }: PortfolioCLIProps) => {
-  const [input, setInput] = useState("");
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const navigate = useNavigate();
+
+  // State
+  const [vfs, setVfs] = useState<VFSNode>(loadVFS);
+  const [currentDir, setCurrentDir] = useState<string>("/home/karan");
+  const [sshSession, setSshSession] = useState<{ isConnected: boolean; host: string; user: string } | null>(null);
+  const [activeView, setActiveView] = useState<"terminal" | "top">("terminal");
+  const [themeName, setThemeName] = useState<string>(loadTheme);
+  const [topTick, setTopTick] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundSetting);
+
   const [commandHistory, setCommandHistory] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("portfolio_cli_history");
@@ -304,46 +325,75 @@ const PortfolioCLI = ({
     }
   });
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const dialogContentRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-
-  // Virtual OS, SSH & Audio State
-  const [vfs, setVfs] = useState<VFSNode>(loadVFS);
-  const [currentDir, setCurrentDir] = useState<string>("/home/karan");
-  const [sshSession, setSshSession] = useState<{ isConnected: boolean; host: string; user: string } | null>(null);
-  const [activeView, setActiveView] = useState<"terminal" | "top">("terminal");
-  const [themeName, setThemeName] = useState<string>(loadTheme);
-  const [topTick, setTopTick] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundSetting);
-
-  const theme = themes[themeName] || themes.default;
-
-  const [sessionStartTime] = useState(() => {
-    return new Intl.DateTimeFormat("en-IN", {
-      dateStyle: "full",
-      timeStyle: "medium",
-    }).format(new Date());
-  });
 
   type SendState = "idle" | "awaiting_name" | "awaiting_email" | "awaiting_subject" | "awaiting_message" | "submitting";
   const [sendState, setSendState] = useState<SendState>("idle");
   const [sendForm, setSendForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const sendFormRef = useRef(sendForm);
+  sendFormRef.current = sendForm;
 
   const [authState, setAuthState] = useState<"idle" | "awaiting_email" | "awaiting_password" | "authenticating">("idle");
   const [authEmail, setAuthEmail] = useState("");
+  const authEmailRef = useRef(authEmail);
+  authEmailRef.current = authEmail;
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const ghostSuggestion = (() => {
-    if (authState !== "idle" || sendState !== "idle" || activeView !== "terminal" || !input.trim()) return "";
-    const q = input.toLowerCase();
-    const match = availableCommands.find((c) => c.toLowerCase().startsWith(q) && c.toLowerCase() !== q);
-    if (!match) return "";
-    return match.slice(q.length);
-  })();
+  const currentThemeObj = xtermThemeMap[themeName] || xtermThemeMap.default;
+
+  // Sync refs for event listeners
+  const currentDirRef = useRef(currentDir);
+  currentDirRef.current = currentDir;
+
+  const sshSessionRef = useRef(sshSession);
+  sshSessionRef.current = sshSession;
+
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
+
+  const soundEnabledRef = useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+
+  const sendStateRef = useRef(sendState);
+  sendStateRef.current = sendState;
+
+  const authStateRef = useRef(authState);
+  authStateRef.current = authState;
+
+  const activeViewRef = useRef(activeView);
+  activeViewRef.current = activeView;
+
+  const historyIndexRef = useRef(historyIndex);
+  historyIndexRef.current = historyIndex;
+
+  const commandHistoryRef = useRef(commandHistory);
+  commandHistoryRef.current = commandHistory;
+
+  const vfsRef = useRef(vfs);
+  vfsRef.current = vfs;
+
+  // Prompt generator
+  const getPromptString = useCallback(() => {
+    if (sendStateRef.current === "awaiting_name") return "\x1b[36mStep 1/4 (Your Name):\x1b[0m ";
+    if (sendStateRef.current === "awaiting_email") return "\x1b[36mStep 2/4 (Your Email):\x1b[0m ";
+    if (sendStateRef.current === "awaiting_subject") return "\x1b[36mStep 3/4 (Subject):\x1b[0m ";
+    if (sendStateRef.current === "awaiting_message") return "\x1b[36mStep 4/4 (Message):\x1b[0m ";
+    if (authStateRef.current === "awaiting_email") return "\x1b[36mEnter Admin Email:\x1b[0m ";
+    if (authStateRef.current === "awaiting_password") return "\x1b[36mEnter Password:\x1b[0m ";
+
+    const userStr = sshSessionRef.current
+      ? `\x1b[1;32m${sshSessionRef.current.user}@${sshSessionRef.current.host}\x1b[0m`
+      : currentUserRef.current
+      ? `\x1b[1;31madmin@karan\x1b[0m`
+      : `\x1b[1;32mdev@karan\x1b[0m`;
+    const symbol = sshSessionRef.current?.user === "root" || currentUserRef.current ? "#" : "$";
+    return `${userStr}:\x1b[1;34m${currentDirRef.current}\x1b[0m${symbol} `;
+  }, []);
+
+  const writePrompt = useCallback(() => {
+    if (!xtermRef.current) return;
+    xtermRef.current.write(`\r\n${getPromptString()}`);
+  }, [getPromptString]);
 
   // Sync command history to localStorage
   useEffect(() => {
@@ -367,41 +417,46 @@ const PortfolioCLI = ({
     return () => subscription.unsubscribe();
   }, []);
 
-  // Interval for top live update
+  // Top screen refresh interval
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (activeView === "top") {
+    if (activeView === "top" && xtermRef.current) {
+      let currentTick = 0;
       timer = setInterval(() => {
-        setTopTick((t) => t + 1);
+        currentTick += 1;
+        setTopTick(currentTick);
+        const topData = generateTopData(currentTick);
+        const term = xtermRef.current;
+        if (!term) return;
+
+        term.write("\x1b[H\x1b[2J"); // Clear screen
+        term.writeln(`\x1b[1;33mtop - ${topData.uptimeStr}\x1b[0m  \x1b[1;32m● LIVE\x1b[0m (Press 'q' or Esc to exit)`);
+        term.writeln(`Tasks: \x1b[1m${topData.tasksCount}\x1b[0m total, \x1b[32m${topData.runningCount}\x1b[0m running, \x1b[90m${topData.sleepingCount}\x1b[0m sleeping`);
+        term.writeln(`%Cpu(s): \x1b[1;36m${topData.cpuVal}%\x1b[0m us, 2.1% sy | MiB Mem: \x1b[1;35m${topData.memVal}%\x1b[0m used`);
+        term.writeln(`Load Avg: \x1b[33m${topData.loadAvg}\x1b[0m`);
+        term.writeln("");
+        term.writeln("\x1b[7m  PID  USER     PR  NI  VIRT   RES   %CPU  %MEM  TIME+    COMMAND                \x1b[0m");
+
+        topData.processes.forEach((proc) => {
+          const pid = String(proc.pid).padStart(5);
+          const user = proc.user.padEnd(8);
+          const pr = proc.pr.padStart(3);
+          const ni = String(proc.ni).padStart(3);
+          const virt = proc.virt.padStart(6);
+          const res = proc.res.padStart(6);
+          const cpu = proc.cpu.toFixed(1).padStart(5);
+          const mem = proc.mem.toFixed(1).padStart(5);
+          const time = proc.time.padStart(8);
+          term.writeln(`${pid} ${user} ${pr} ${ni} ${virt} ${res} \x1b[33m${cpu}\x1b[0m \x1b[35m${mem}\x1b[0m ${time} \x1b[1m${proc.command}\x1b[0m`);
+        });
       }, 1000);
     }
     return () => clearInterval(timer);
   }, [activeView]);
 
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-    }
-  }, [history, activeView]);
-
-  useEffect(() => {
-    if (open) {
-      setIsMinimized(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [open]);
-
-  const toggleAudio = () => {
-    const nextState = !soundEnabled;
-    setSoundEnabled(nextState);
-    saveSoundSetting(nextState);
-    if (nextState) {
-      playKeySound("key", true);
-    }
-  };
-
   const triggerResumeDownload = async () => {
-    setHistory((prev) => [...prev, { command: "download", output: ["", "  📥 Preparing resume download...", ""] }]);
+    if (!xtermRef.current) return;
+    xtermRef.current.writeln("\r\n  \x1b[36m📥 Preparing resume download...\x1b[0m");
     try {
       const { data } = await supabase
         .from("site_settings")
@@ -417,13 +472,15 @@ const PortfolioCLI = ({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setHistory((prev) => [...prev, { command: "", output: ["  🟢 Download started successfully!", ""] }]);
+      xtermRef.current.writeln("  \x1b[32m🟢 Download started successfully!\x1b[0m");
     } catch {
       window.open("/resume.pdf", "_blank");
     }
   };
 
   const handleOpenOrCd = (targetStr: string, isCd: boolean) => {
+    const term = xtermRef.current;
+    if (!term) return;
     const target = targetStr.trim().replace(/^\/+|\/+$/g, "");
     const lowerTarget = target.toLowerCase();
 
@@ -453,87 +510,88 @@ const PortfolioCLI = ({
 
     if (routes[lowerTarget]) {
       navigate(routes[lowerTarget]);
-      setHistory((prev) => [...prev, { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Navigated web page to ${routes[lowerTarget]}`, ""] }]);
+      term.writeln(`\r\n  \x1b[32mNavigated web page to ${routes[lowerTarget]}\x1b[0m`);
       return;
     }
 
     if (externalLinks[lowerTarget]) {
       window.open(externalLinks[lowerTarget], "_blank", "noopener,noreferrer");
-      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening external link: ${externalLinks[lowerTarget]}`, ""] }]);
+      term.writeln(`\r\n  \x1b[36mOpening external link: ${externalLinks[lowerTarget]}\x1b[0m`);
       return;
     }
 
     if (target.startsWith("http://") || target.startsWith("https://")) {
       window.open(target, "_blank", "noopener,noreferrer");
-      setHistory((prev) => [...prev, { command: `open ${targetStr}`, output: ["", `  Opening URL: ${target}`, ""] }]);
+      term.writeln(`\r\n  \x1b[36mOpening URL: ${target}\x1b[0m`);
       return;
     }
 
-    // Try VFS Directory navigation
     if (isCd) {
-      const newPath = resolvePath(currentDir, targetStr);
-      const outputLines = formatLsOutput(vfs, currentDir, targetStr);
+      const newPath = resolvePath(currentDirRef.current, targetStr);
+      const outputLines = formatLsOutput(vfsRef.current, currentDirRef.current, targetStr);
       if (outputLines.length > 0 && outputLines[0].includes("No such file")) {
-        playKeySound("bell", soundEnabled);
-        setHistory((prev) => [...prev, { command: `cd ${targetStr}`, output: ["", `  cd: ${targetStr}: No such file or directory`, ""] }]);
+        playKeySound("bell", soundEnabledRef.current);
+        term.writeln(`\r\n  \x1b[31mcd: ${targetStr}: No such file or directory\x1b[0m`);
       } else {
         setCurrentDir(newPath);
-        setHistory((prev) => [...prev, { command: `cd ${targetStr}`, output: [] }]);
       }
       return;
     }
 
-    playKeySound("bell", soundEnabled);
-    setHistory((prev) => [
-      ...prev,
-      { command: `${isCd ? "cd" : "open"} ${targetStr}`, output: ["", `  Error: target '${targetStr}' not found. Type 'ls' or 'help' to see valid targets.`, ""] }
-    ]);
+    playKeySound("bell", soundEnabledRef.current);
+    term.writeln(`\r\n  \x1b[31mError: target '${targetStr}' not found. Type 'ls' or 'help' to see valid targets.\x1b[0m`);
   };
 
   const handleCommand = async (cmd: string) => {
+    const term = xtermRef.current;
+    if (!term) return;
     const trimmedInput = cmd.trim();
 
-    if (activeView === "top") {
+    if (activeViewRef.current === "top") {
       if (trimmedInput.toLowerCase() === "q" || trimmedInput.toLowerCase() === "exit") {
         setActiveView("terminal");
+        term.write("\x1b[H\x1b[2J");
       }
       return;
     }
 
-    if (sendState === "awaiting_name") {
+    if (sendStateRef.current === "awaiting_name") {
       if (!trimmedInput) return;
+      sendFormRef.current = { ...sendFormRef.current, name: trimmedInput };
       setSendForm((prev) => ({ ...prev, name: trimmedInput }));
-      setHistory((prev) => [...prev, { command: "Name: " + trimmedInput, output: ["", "  Step 2/4: Enter your email address:", ""] }]);
+      term.writeln("\r\n  \x1b[36mStep 2/4: Enter your email address:\x1b[0m");
       setSendState("awaiting_email");
       return;
     }
 
-    if (sendState === "awaiting_email") {
+    if (sendStateRef.current === "awaiting_email") {
       if (!trimmedInput) return;
       const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedInput);
       if (!isEmailValid) {
-        playKeySound("bell", soundEnabled);
-        setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: ["", "  🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):", ""] }]);
+        playKeySound("bell", soundEnabledRef.current);
+        term.writeln("\r\n  \x1b[31m🔴 Invalid email format. Please enter a valid email address (e.g. alex@example.com):\x1b[0m");
         return;
       }
+      sendFormRef.current = { ...sendFormRef.current, email: trimmedInput };
       setSendForm((prev) => ({ ...prev, email: trimmedInput }));
-      setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: ["", "  Step 3/4: Subject / Topic?", ""] }]);
+      term.writeln("\r\n  \x1b[36mStep 3/4: Subject / Topic?\x1b[0m");
       setSendState("awaiting_subject");
       return;
     }
 
-    if (sendState === "awaiting_subject") {
+    if (sendStateRef.current === "awaiting_subject") {
       if (!trimmedInput) return;
+      sendFormRef.current = { ...sendFormRef.current, subject: trimmedInput };
       setSendForm((prev) => ({ ...prev, subject: trimmedInput }));
-      setHistory((prev) => [...prev, { command: "Subject: " + trimmedInput, output: ["", "  Step 4/4: Type your message body:", ""] }]);
+      term.writeln("\r\n  \x1b[36mStep 4/4: Type your message body:\x1b[0m");
       setSendState("awaiting_message");
       return;
     }
 
-    if (sendState === "awaiting_message") {
+    if (sendStateRef.current === "awaiting_message") {
       if (!trimmedInput) return;
-      const finalPayload = { ...sendForm, message: trimmedInput };
-      setHistory((prev) => [...prev, { command: "Message: " + trimmedInput, output: ["", "  Connecting to database & delivering message..."] }]);
+      const finalPayload = { ...sendFormRef.current, message: trimmedInput };
+      term.writeln("\r\n  Connecting to database & delivering message...");
       setSendState("submitting");
 
       try {
@@ -541,52 +599,56 @@ const PortfolioCLI = ({
           { name: finalPayload.name, email: finalPayload.email, subject: finalPayload.subject, message: finalPayload.message },
         ]);
         if (error) throw error;
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: "",
-            output: [
-              "",
-              "  🟢 Message Sent Successfully!",
-              `  Thank you, ${finalPayload.name}! Your message has been delivered.`,
-              `  Karan will review it and get back to you at ${finalPayload.email}.`,
-              "",
-            ],
-          },
-        ]);
+        term.writeln("  \x1b[32m🟢 Message Sent Successfully!\x1b[0m");
+        term.writeln(`  Thank you, ${finalPayload.name}! Your message has been delivered.`);
+        term.writeln(`  Karan will review it and get back to you at ${finalPayload.email}.`);
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error sending message: ${msg}`, "  Please try again or email karangholap@zohomail.in directly.", ""] }]);
+        term.writeln(`  \x1b[31m🔴 Error sending message: ${msg}\x1b[0m`);
       } finally {
         setSendState("idle");
         setSendForm({ name: "", email: "", subject: "", message: "" });
+        sendFormRef.current = { name: "", email: "", subject: "", message: "" };
       }
       return;
     }
 
-    if (authState === "awaiting_email") {
+    if (authStateRef.current === "awaiting_email") {
       if (!trimmedInput) return;
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedInput);
+      if (!isEmailValid) {
+        playKeySound("bell", soundEnabledRef.current);
+        term.writeln("\r\n  \x1b[31m🔴 Invalid email format. Please enter a valid admin email:\x1b[0m");
+        return;
+      }
+      authEmailRef.current = trimmedInput;
       setAuthEmail(trimmedInput);
-      setHistory((prev) => [...prev, { command: "Email: " + trimmedInput, output: [] }]);
+      term.writeln("\r\n  \x1b[36mEnter Password:\x1b[0m");
       setAuthState("awaiting_password");
       return;
     }
 
-    if (authState === "awaiting_password") {
-      setHistory((prev) => [...prev, { command: "Password: " + "•".repeat(trimmedInput.length), output: ["Connecting to Supabase auth..."] }]);
+    if (authStateRef.current === "awaiting_password") {
+      const emailToAuthenticate = authEmailRef.current;
+      term.writeln(`\r\n  Connecting to Supabase auth as \x1b[1;36m${emailToAuthenticate}\x1b[0m...`);
       setAuthState("authenticating");
       try {
-        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: trimmedInput });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailToAuthenticate,
+          password: trimmedInput,
+        });
         if (error) throw error;
-        setHistory((prev) => [...prev, { command: "", output: ["", "  🟢 Authentication Successful!", "  Welcome, admin. You are now logged in.", ""] }]);
+        term.writeln("  \x1b[32m🟢 Authentication Successful!\x1b[0m");
+        term.writeln(`  Welcome, admin (${emailToAuthenticate}). You are now logged in.`);
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Access Denied: ${errorMsg}`, ""] }]);
+        term.writeln(`  \x1b[31m🔴 Access Denied: ${errorMsg}\x1b[0m`);
       } finally {
         setAuthState("idle");
         setAuthEmail("");
+        authEmailRef.current = "";
       }
       return;
     }
@@ -597,28 +659,10 @@ const PortfolioCLI = ({
     setCommandHistory((prev) => [...prev, trimmedInput]);
     setHistoryIndex(-1);
 
-    const currentUserPrompt = sshSession
-      ? `${sshSession.user}@${sshSession.host}`
-      : currentUser
-      ? "admin@karan"
-      : "dev@karan";
-
     // Audio Commands
     if (trimmedCmd === "sound" || trimmedCmd === "sound status") {
-      setHistory((prev) => [
-        ...prev,
-        {
-          command: cmd,
-          output: [
-            "",
-            `  🔊 Retro Mechanical Audio Feedback: ${soundEnabled ? "ENABLED (ON)" : "DISABLED (OFF)"}`,
-            "  Usage: sound on | sound off | sound toggle",
-            "",
-          ],
-          cwd: currentDir,
-          userPrompt: currentUserPrompt,
-        },
-      ]);
+      term.writeln(`\r\n  🔊 Retro Mechanical Audio Feedback: \x1b[1m${soundEnabledRef.current ? "ENABLED (ON)" : "DISABLED (OFF)"}\x1b[0m`);
+      term.writeln("  Usage: sound on | sound off | sound toggle");
       return;
     }
 
@@ -626,20 +670,23 @@ const PortfolioCLI = ({
       setSoundEnabled(true);
       saveSoundSetting(true);
       playKeySound("enter", true);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  🔊 Retro Mechanical Audio Feedback ENABLED!", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  \x1b[32m🔊 Retro Mechanical Audio Feedback ENABLED!\x1b[0m");
       return;
     }
 
     if (trimmedCmd === "sound off") {
       setSoundEnabled(false);
       saveSoundSetting(false);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  🔇 Retro Mechanical Audio Feedback MUTED.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  \x1b[90m🔇 Retro Mechanical Audio Feedback MUTED.\x1b[0m");
       return;
     }
 
     if (trimmedCmd === "sound toggle") {
-      toggleAudio();
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  🔊 Audio Feedback toggled ${!soundEnabled ? "ON" : "OFF"}.`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      const nextState = !soundEnabledRef.current;
+      setSoundEnabled(nextState);
+      saveSoundSetting(nextState);
+      if (nextState) playKeySound("enter", true);
+      term.writeln(`\r\n  \x1b[36m🔊 Audio Feedback toggled ${nextState ? "ON" : "OFF"}.\x1b[0m`);
       return;
     }
 
@@ -657,30 +704,41 @@ const PortfolioCLI = ({
 
       setSshSession({ isConnected: true, host, user });
       const bannerLines = getSSHBanner(host, user);
-      setHistory((prev) => [...prev, { command: cmd, output: bannerLines, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      bannerLines.forEach((line) => term.writeln(line));
       return;
     }
 
+    // Exit / Logout Handler (SSH & Admin Session)
     if (trimmedCmd === "exit" || trimmedCmd === "logout") {
-      if (sshSession) {
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: cmd,
-            output: ["", `  Connection to ${sshSession.host} closed by remote host.`, "  Returned to local terminal session.", ""],
-            cwd: currentDir,
-            userPrompt: currentUserPrompt,
-          },
-        ]);
+      if (sshSessionRef.current) {
+        term.writeln(`\r\n  Connection to ${sshSessionRef.current.host} closed by remote host.`);
+        term.writeln("  Returned to local terminal session.");
         setSshSession(null);
         return;
       }
+
+      if (currentUserRef.current) {
+        term.writeln("\r\n  Signing out from admin session...");
+        try {
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+          currentUserRef.current = null;
+          term.writeln("  \x1b[32m🟢 Admin session ended. Logged out successfully.\x1b[0m");
+        } catch (err: unknown) {
+          playKeySound("bell", soundEnabledRef.current);
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          term.writeln(`  \x1b[31m🔴 Error logging out: ${errorMsg}\x1b[0m`);
+        }
+        return;
+      }
+
+      term.writeln("\r\n  No active SSH or admin session to log out from.");
+      return;
     }
 
     // Process Monitor
     if (trimmedCmd === "top" || trimmedCmd === "htop") {
       setActiveView("top");
-      setHistory((prev) => [...prev, { command: cmd, output: ["  Launching live process monitor 'top'... (Press 'q' or Esc to exit)"], cwd: currentDir, userPrompt: currentUserPrompt }]);
       return;
     }
 
@@ -688,22 +746,22 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("ping ")) {
       const host = trimmedInput.slice(5).trim();
       const pingOutput = executePing(host);
-      setHistory((prev) => [...prev, { command: cmd, output: pingOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      pingOutput.forEach((line) => term.writeln(line));
       return;
     }
 
     if (trimmedCmd === "df" || trimmedCmd === "df -h") {
-      setHistory((prev) => [...prev, { command: cmd, output: executeDf(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      executeDf().forEach((line) => term.writeln(line));
       return;
     }
 
     if (trimmedCmd === "free" || trimmedCmd === "free -m") {
-      setHistory((prev) => [...prev, { command: cmd, output: executeFree(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      executeFree().forEach((line) => term.writeln(line));
       return;
     }
 
     if (trimmedCmd === "netstat" || trimmedCmd === "netstat -tuln") {
-      setHistory((prev) => [...prev, { command: cmd, output: executeNetstat(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      executeNetstat().forEach((line) => term.writeln(line));
       return;
     }
 
@@ -711,38 +769,27 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("theme")) {
       const sub = trimmedCmd.slice(5).trim();
       if (!sub || sub === "list") {
-        setHistory((prev) => [
-          ...prev,
-          {
-            command: cmd,
-            output: [
-              "",
-              "  🎨 AVAILABLE TERMINAL THEMES:",
-              "    • default   - Dark sleek theme",
-              "    • matrix    - Classic green matrix glow",
-              "    • dracula   - Vibrant purple Dracula palette",
-              "    • cyberpunk - High contrast cyan & neon yellow",
-              "    • ubuntu    - Classic Ubuntu terminal aubergine",
-              "",
-              "  Usage: theme set [name] (e.g. theme set dracula)",
-              "",
-            ],
-            cwd: currentDir,
-            userPrompt: currentUserPrompt,
-          },
-        ]);
+        term.writeln("\r\n  \x1b[1m🎨 AVAILABLE TERMINAL THEMES:\x1b[0m");
+        term.writeln("    • \x1b[36mdefault\x1b[0m   - Dark sleek theme");
+        term.writeln("    • \x1b[32mmatrix\x1b[0m    - Classic green matrix glow");
+        term.writeln("    • \x1b[35mdracula\x1b[0m   - Vibrant purple Dracula palette");
+        term.writeln("    • \x1b[33mcyberpunk\x1b[0m - High contrast cyan & neon yellow");
+        term.writeln("    • \x1b[31mubuntu\x1b[0m    - Classic Ubuntu terminal aubergine");
+        term.writeln("\r\n  Usage: theme set [name] (e.g. theme set dracula)");
         return;
       }
 
       if (sub.startsWith("set ")) {
         const tName = sub.slice(4).trim().toLowerCase();
-        if (themes[tName]) {
+        if (themes[tName] && xtermRef.current) {
           setThemeName(tName);
           saveTheme(tName);
-          setHistory((prev) => [...prev, { command: cmd, output: ["", `  🎨 Theme switched to '${tName}'!`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          const xTheme = xtermThemeMap[tName] || xtermThemeMap.default;
+          xtermRef.current.options.theme = xTheme;
+          term.writeln(`\r\n  \x1b[32m🎨 Theme switched to '${tName}'!\x1b[0m`);
         } else {
-          playKeySound("bell", soundEnabled);
-          setHistory((prev) => [...prev, { command: cmd, output: ["", `  Error: Theme '${tName}' not found. Type 'theme' to view options.`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          playKeySound("bell", soundEnabledRef.current);
+          term.writeln(`\r\n  \x1b[31mError: Theme '${tName}' not found. Type 'theme' to view options.\x1b[0m`);
         }
         return;
       }
@@ -750,7 +797,7 @@ const PortfolioCLI = ({
 
     // VFS Commands
     if (trimmedCmd === "pwd") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  ${currentDir}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln(`\r\n  ${currentDirRef.current}`);
       return;
     }
 
@@ -769,26 +816,27 @@ const PortfolioCLI = ({
         }
       }
 
-      const lines = formatLsOutput(vfs, currentDir, targetPath, showAll, showLong);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", ...lines, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      const lines = formatLsOutput(vfsRef.current, currentDirRef.current, targetPath, showAll, showLong);
+      term.writeln("");
+      lines.forEach((l) => term.writeln(l));
       return;
     }
 
     if (trimmedCmd.startsWith("mkdir ")) {
       const dirName = trimmedInput.slice(6).trim();
-      const res = executeMkdir(vfs, currentDir, dirName, sshSession ? sshSession.user : "karan");
+      const res = executeMkdir(vfsRef.current, currentDirRef.current, dirName, sshSessionRef.current ? sshSessionRef.current.user : "karan");
       if (res.updatedRoot) setVfs(res.updatedRoot);
-      if (!res.success) playKeySound("bell", soundEnabled);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (!res.success) playKeySound("bell", soundEnabledRef.current);
+      term.writeln(`\r\n  ${res.message}`);
       return;
     }
 
     if (trimmedCmd.startsWith("touch ")) {
       const fileName = trimmedInput.slice(6).trim();
-      const res = executeTouch(vfs, currentDir, fileName, sshSession ? sshSession.user : "karan");
+      const res = executeTouch(vfsRef.current, currentDirRef.current, fileName, sshSessionRef.current ? sshSessionRef.current.user : "karan");
       if (res.updatedRoot) setVfs(res.updatedRoot);
-      if (!res.success) playKeySound("bell", soundEnabled);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (!res.success) playKeySound("bell", soundEnabledRef.current);
+      term.writeln(`\r\n  ${res.message}`);
       return;
     }
 
@@ -797,28 +845,29 @@ const PortfolioCLI = ({
       const isRecursive = rest.startsWith("-r ") || rest.startsWith("-rf ");
       const targetName = isRecursive ? rest.replace(/^-r[f]?\s+/, "") : rest;
 
-      const res = executeRm(vfs, currentDir, targetName, isRecursive);
+      const res = executeRm(vfsRef.current, currentDirRef.current, targetName, isRecursive);
       if (res.updatedRoot) setVfs(res.updatedRoot);
-      if (!res.success) playKeySound("bell", soundEnabled);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (!res.success) playKeySound("bell", soundEnabledRef.current);
+      term.writeln(`\r\n  ${res.message}`);
       return;
     }
 
     if (trimmedCmd.startsWith("cat ")) {
       const fileName = trimmedInput.slice(4).trim();
       if (fileName.toLowerCase() === "readme.md" || fileName.toLowerCase() === "readme") {
-        setHistory((prev) => [...prev, { command: cmd, output: readmeOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+        readmeOutput.forEach((l) => term.writeln(l));
       } else if (fileName.toLowerCase() === "resume" || fileName.toLowerCase() === "resume.pdf") {
-        setHistory((prev) => [...prev, { command: cmd, output: resumeTextOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+        resumeTextOutput.forEach((l) => term.writeln(l));
       } else {
-        const lines = executeCat(vfs, currentDir, fileName);
-        if (lines.length > 0 && lines[0].includes("No such file")) playKeySound("bell", soundEnabled);
-        setHistory((prev) => [...prev, { command: cmd, output: ["", ...lines, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        const lines = executeCat(vfsRef.current, currentDirRef.current, fileName);
+        if (lines.length > 0 && lines[0].includes("No such file")) playKeySound("bell", soundEnabledRef.current);
+        term.writeln("");
+        lines.forEach((l) => term.writeln(l));
       }
       return;
     }
 
-    // Redirect writing: echo "text" > file or echo "text" >> file
+    // Echo & Redirection
     if (trimmedCmd.includes(">")) {
       const isAppend = trimmedCmd.includes(">>");
       const parts = trimmedInput.split(isAppend ? ">>" : ">");
@@ -828,32 +877,37 @@ const PortfolioCLI = ({
       const filePath = parts[1].trim();
 
       if (filePath) {
-        const res = executeWriteFile(vfs, currentDir, filePath, rawText, isAppend, sshSession ? sshSession.user : "karan");
+        const res = executeWriteFile(vfsRef.current, currentDirRef.current, filePath, rawText, isAppend, sshSessionRef.current ? sshSessionRef.current.user : "karan");
         if (res.updatedRoot) setVfs(res.updatedRoot);
-        if (!res.success) playKeySound("bell", soundEnabled);
-        setHistory((prev) => [...prev, { command: cmd, output: ["", res.message, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        if (!res.success) playKeySound("bell", soundEnabledRef.current);
+        term.writeln(`\r\n  ${res.message}`);
         return;
       }
     }
 
-    if (trimmedCmd === "clear") { setHistory([]); return; }
+    if (trimmedCmd === "clear") {
+      term.write("\x1b[H\x1b[2J");
+      return;
+    }
+
     if (trimmedCmd === "help" || trimmedCmd === "?") {
-      setHistory((prev) => [...prev, { command: cmd, output: helpList, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("");
+      helpList.forEach((l) => term.writeln(l));
       return;
     }
 
     if (trimmedCmd === "tree") {
-      setHistory((prev) => [...prev, { command: cmd, output: treeOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      treeOutput.forEach((l) => term.writeln(l));
       return;
     }
 
     if (trimmedCmd === "shortcuts" || trimmedCmd === "keys") {
-      setHistory((prev) => [...prev, { command: cmd, output: shortcutsOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      shortcutsOutput.forEach((l) => term.writeln(l));
       return;
     }
 
     if (trimmedCmd === "time" || trimmedCmd === "tz") {
-      setHistory((prev) => [...prev, { command: cmd, output: getTimezoneOutput(), cwd: currentDir, userPrompt: currentUserPrompt }]);
+      getTimezoneOutput().forEach((l) => term.writeln(l));
       return;
     }
 
@@ -862,8 +916,56 @@ const PortfolioCLI = ({
       return;
     }
 
+    if (trimmedCmd.startsWith("skills search ")) {
+      const termQuery = trimmedCmd.slice(14).trim().toLowerCase();
+      const skillsList = [
+        "React.js", "Next.js", "HTML5", "CSS3", "JavaScript", "TypeScript", "Tailwind CSS", "Bootstrap", "Shadcn UI",
+        "Node.js", "Express.js", "Python", "Flask", "PostgreSQL", "MySQL", "MongoDB", "Supabase",
+        "Git", "GitHub", "Figma", "JIRA", "AWS", "Vercel", "Netlify", "VS Code", "Postman", "WordPress"
+      ];
+      const matches = skillsList.filter((s) => s.toLowerCase().includes(termQuery));
+      term.writeln(`\r\n  Found matching skills for "${termQuery}":`);
+      if (matches.length > 0) {
+        matches.forEach((m) => term.writeln(`    • \x1b[32m${m}\x1b[0m`));
+      } else {
+        term.writeln(`    \x1b[31mNo matching skills found for "${termQuery}"\x1b[0m`);
+      }
+      return;
+    }
+
+    if (trimmedCmd.startsWith("projects filter")) {
+      const type = trimmedCmd.replace(/^projects filter\s*/, "").trim().toLowerCase();
+      if (type !== "web" && type !== "mobile") {
+        term.writeln("\r\n  Usage: projects filter [web|mobile]");
+        return;
+      }
+      term.writeln(`\r\n  Fetching ${type} projects from database...`);
+      try {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("type", type)
+          .order("order", { ascending: true });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          term.writeln(`  No ${type} projects found in database.`);
+        } else {
+          term.writeln(`\r\n  \x1b[1;36m🚀 ${type.toUpperCase()} PROJECTS\x1b[0m`);
+          data.forEach((p, idx) => {
+            term.writeln(`  [${idx + 1}] \x1b[1m${p.title}\x1b[0m (${p.role})`);
+            term.writeln(`      Desc: ${p.description}\n`);
+          });
+        }
+      } catch (err: unknown) {
+        playKeySound("bell", soundEnabledRef.current);
+        const msg = err instanceof Error ? err.message : String(err);
+        term.writeln(`  \x1b[31mError fetching projects: ${msg}\x1b[0m`);
+      }
+      return;
+    }
+
     if (trimmedCmd === "experience" || trimmedCmd === "work") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching work experience from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  Fetching work experience from database...");
       try {
         const { data, error } = await supabase
           .from("experience")
@@ -871,31 +973,29 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No work experience records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("  No work experience records found in database.");
         } else {
-          const lines = ["", "  💼 WORK EXPERIENCE (from Supabase DB)", "  ==========================================="];
+          term.writeln("\r\n  \x1b[1;36m💼 WORK EXPERIENCE (from Supabase DB)\x1b[0m");
+          term.writeln("  ===========================================");
           data.forEach((item, idx) => {
-            lines.push(
-              `  [${idx + 1}] ${item.role} @ ${item.company}`,
-              `      Duration : ${item.duration}`
-            );
+            term.writeln(`  [${idx + 1}] \x1b[1m${item.role} @ ${item.company}\x1b[0m`);
+            term.writeln(`      Duration : ${item.duration}`);
             if (Array.isArray(item.highlights) && item.highlights.length > 0) {
-              item.highlights.forEach((h: string) => lines.push(`      • ${h}`));
+              item.highlights.forEach((h: string) => term.writeln(`      • ${h}`));
             }
-            lines.push("");
+            term.writeln("");
           });
-          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching experience: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31m🔴 Error fetching experience: ${msg}\x1b[0m`);
       }
       return;
     }
 
     if (trimmedCmd === "education") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching education details from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  Fetching education details from database...");
       try {
         const { data, error } = await supabase
           .from("education")
@@ -903,29 +1003,26 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No education records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("  No education records found in database.");
         } else {
-          const lines = ["", "  🎓 EDUCATION HISTORY (from Supabase DB)", "  ==========================================="];
+          term.writeln("\r\n  \x1b[1;36m🎓 EDUCATION HISTORY (from Supabase DB)\x1b[0m");
+          term.writeln("  ===========================================");
           data.forEach((item, idx) => {
-            lines.push(
-              `  [${idx + 1}] ${item.degree}`,
-              `      Institution : ${item.institution}`,
-              `      Duration    : ${item.duration}`,
-              ""
-            );
+            term.writeln(`  [${idx + 1}] \x1b[1m${item.degree}\x1b[0m`);
+            term.writeln(`      Institution : ${item.institution}`);
+            term.writeln(`      Duration    : ${item.duration}\n`);
           });
-          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching education: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31m🔴 Error fetching education: ${msg}\x1b[0m`);
       }
       return;
     }
 
     if (trimmedCmd === "certifications" || trimmedCmd === "certs") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching certifications from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  Fetching certifications from database...");
       try {
         const { data, error } = await supabase
           .from("certifications")
@@ -933,23 +1030,23 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No certification records found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("  No certification records found in database.");
         } else {
-          const lines = ["", "  📜 CERTIFICATIONS (from Supabase DB)", "  ==========================================="];
-          data.forEach((item) => lines.push(`    🏆 ${item.name}`));
-          lines.push("");
-          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("\r\n  \x1b[1;36m📜 CERTIFICATIONS (from Supabase DB)\x1b[0m");
+          term.writeln("  ===========================================");
+          data.forEach((item) => term.writeln(`    🏆 ${item.name}`));
+          term.writeln("");
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching certifications: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31m🔴 Error fetching certifications: ${msg}\x1b[0m`);
       }
       return;
     }
 
     if (trimmedCmd === "projects") {
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Fetching all projects from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  Fetching all projects from database...");
       try {
         const { data, error } = await supabase
           .from("projects")
@@ -957,28 +1054,24 @@ const PortfolioCLI = ({
           .order("order", { ascending: true });
         if (error) throw error;
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  No projects found in database.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("  No projects found in database.");
         } else {
-          const lines = ["", "  🚀 FEATURED PROJECTS (from Supabase DB)", "  ==========================================="];
+          term.writeln("\r\n  \x1b[1;36m🚀 FEATURED PROJECTS (from Supabase DB)\x1b[0m");
+          term.writeln("  ===========================================");
           data.forEach((p, idx) => {
-            lines.push(
-              `  [${idx + 1}] ${p.title} (${(p.type || "WEB").toUpperCase()})`,
-              `      Role : ${p.role}`,
-              `      Desc : ${p.description}`
-            );
+            term.writeln(`  [${idx + 1}] \x1b[1m${p.title}\x1b[0m (${(p.type || "WEB").toUpperCase()})`);
+            term.writeln(`      Role : ${p.role}`);
+            term.writeln(`      Desc : ${p.description}`);
             if (p.tech_stack && Array.isArray(p.tech_stack) && p.tech_stack.length > 0) {
-              lines.push(`      Tech : ${p.tech_stack.join(", ")}`);
+              term.writeln(`      Tech : ${p.tech_stack.join(", ")}`);
             }
-            lines.push("");
+            term.writeln("");
           });
-          lines.push("  💡 Tip: Type 'open projects' to open projects page in browser.");
-          lines.push("");
-          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error fetching projects: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31m🔴 Error fetching projects: ${msg}\x1b[0m`);
       }
       return;
     }
@@ -986,10 +1079,10 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("search ")) {
       const queryTerm = cmd.slice(7).trim();
       if (!queryTerm) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Usage: search [term] (e.g. search React, search Engineering)", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln("\r\n  Usage: search [term] (e.g. search React, search Engineering)");
         return;
       }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", `  Searching database for "${queryTerm}"...`], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln(`\r\n  Searching database for "${queryTerm}"...`);
       try {
         const [projRes, expRes, eduRes, certRes] = await Promise.all([
           supabase.from("projects").select("*").or(`title.ilike.%${queryTerm}%,description.ilike.%${queryTerm}%,role.ilike.%${queryTerm}%`),
@@ -998,54 +1091,49 @@ const PortfolioCLI = ({
           supabase.from("certifications").select("*").ilike("name", `%${queryTerm}%`)
         ]);
 
-        const results: string[] = ["", `  🔍 SEARCH RESULTS FOR "${queryTerm}"`, "  ==========================================="];
+        term.writeln(`\r\n  \x1b[1;36m🔍 SEARCH RESULTS FOR "${queryTerm}"\x1b[0m`);
+        term.writeln("  ===========================================");
         let count = 0;
 
         if (projRes.data && projRes.data.length > 0) {
-          results.push("  🚀 Projects:");
+          term.writeln("  🚀 Projects:");
           projRes.data.forEach((p) => {
-            results.push(`     • ${p.title} (${p.role}) - ${p.description}`);
+            term.writeln(`     • ${p.title} (${p.role}) - ${p.description}`);
             count++;
           });
-          results.push("");
         }
 
         if (expRes.data && expRes.data.length > 0) {
-          results.push("  💼 Work Experience:");
+          term.writeln("  💼 Work Experience:");
           expRes.data.forEach((e) => {
-            results.push(`     • ${e.role} @ ${e.company} (${e.duration})`);
+            term.writeln(`     • ${e.role} @ ${e.company} (${e.duration})`);
             count++;
           });
-          results.push("");
         }
 
         if (eduRes.data && eduRes.data.length > 0) {
-          results.push("  🎓 Education:");
+          term.writeln("  🎓 Education:");
           eduRes.data.forEach((ed) => {
-            results.push(`     • ${ed.degree} @ ${ed.institution}`);
+            term.writeln(`     • ${ed.degree} @ ${ed.institution}`);
             count++;
           });
-          results.push("");
         }
 
         if (certRes.data && certRes.data.length > 0) {
-          results.push("  📜 Certifications:");
+          term.writeln("  📜 Certifications:");
           certRes.data.forEach((c) => {
-            results.push(`     • ${c.name}`);
+            term.writeln(`     • ${c.name}`);
             count++;
           });
-          results.push("");
         }
 
         if (count === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", `  No matching records found across database for "${queryTerm}".`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
-        } else {
-          setHistory((prev) => [...prev, { command: "", output: results, cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln(`  No matching records found across database for "${queryTerm}".`);
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const msg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  🔴 Error searching database: ${msg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31m🔴 Error searching database: ${msg}\x1b[0m`);
       }
       return;
     }
@@ -1053,7 +1141,7 @@ const PortfolioCLI = ({
     if (trimmedCmd.startsWith("calc ")) {
       const expr = cmd.slice(5);
       const res = evaluateMath(expr);
-      setHistory((prev) => [...prev, { command: cmd, output: ["", res, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln(`\r\n${res}`);
       return;
     }
 
@@ -1075,84 +1163,68 @@ const PortfolioCLI = ({
     }
 
     if (trimmedCmd === "whoami" || trimmedCmd === "sudo whoami") {
-      if (sshSession) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: ${sshSession.user}`, `  Host: ${sshSession.host}`, `  Session: SSH Remote Session`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
-      } else if (currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: admin`, `  Email: ${currentUser.email}`, `  Role: authenticated`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (sshSessionRef.current) {
+        term.writeln(`\r\n  User: ${sshSessionRef.current.user} | Host: ${sshSessionRef.current.host} (SSH)`);
+      } else if (currentUserRef.current) {
+        term.writeln(`\r\n  User: admin | Email: ${currentUserRef.current.email} | Role: authenticated`);
       } else {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  User: guest`, `  Role: anonymous`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln("\r\n  User: guest | Role: anonymous");
       }
       return;
     }
 
     if (trimmedCmd === "fetch" || trimmedCmd === "neofetch") {
-      const fetchOutput = [
-        "",
-        `  ⚡ karan@${sshSession ? sshSession.host : "portfolio-os"} ⚡`,
-        "  -----------------------",
-        "  OS       → PortfolioOS v2.5 (Virtual Linux Kernel)",
-        "  Host     → karangholap.com",
-        "  Kernel   → React 18 + Vite 5 + Audio Synthesizer",
-        "  Audio    → Mechanical Switch Audio Synthesizer (" + (soundEnabled ? "ON" : "OFF") + ")",
-        "  Uptime   → 24/7 (Vercel CDN)",
-        "  Shell    → portfolio-cli v2.5 (VFS + SSH + POSIX)",
-        "  Role     → Software Developer @ CandorWorks",
-        "  Founder  → Private Academy Engineering",
-        "  Location → Pune, India (UTC +5:30) 📍",
-        "  Stack    → React, Node.js, TypeScript, Tailwind, Supabase",
-        "",
-      ];
-      setHistory((prev) => [...prev, { command: cmd, output: fetchOutput, cwd: currentDir, userPrompt: currentUserPrompt }]);
+      const hostStr = sshSessionRef.current ? sshSessionRef.current.host : "portfolio-os";
+      term.writeln(`\r\n  \x1b[1;36m⚡ karan@${hostStr} ⚡\x1b[0m`);
+      term.writeln("  -----------------------");
+      term.writeln("  OS       → PortfolioOS v3.0 (xterm.js VT100 Engine)");
+      term.writeln("  Host     → karangholap.com");
+      term.writeln("  Kernel   → React 18 + Vite 5 + Canvas Terminal Engine");
+      term.writeln(`  Audio    → Mechanical Audio Synthesizer (${soundEnabledRef.current ? "ON" : "OFF"})`);
+      term.writeln("  Uptime   → 24/7 (Vercel CDN)");
+      term.writeln("  Shell    → portfolio-cli v3.0 (VT100 + VFS + SSH + POSIX)");
+      term.writeln("  Role     → Software Developer @ CandorWorks");
+      term.writeln("  Founder  → Private Academy Engineering");
+      term.writeln("  Location → Pune, India (UTC +5:30) 📍");
+      term.writeln("  Stack    → React, Node.js, TypeScript, Tailwind, Supabase");
+      term.writeln("");
       return;
     }
 
     if (trimmedCmd.startsWith("echo ")) {
       const msg = cmd.slice(5);
-      setHistory((prev) => [...prev, { command: cmd, output: [msg || ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln(`\r\n  ${msg || ""}`);
       return;
     }
 
-    // Contact interactive wizard
     if (trimmedCmd === "send" || trimmedCmd === "msg" || trimmedCmd === "contact send") {
-      setHistory((prev) => [
-        ...prev,
-        {
-          command: cmd,
-          output: [
-            "",
-            "  📨 Interactive Contact Wizard",
-            "  ===========================================",
-            "  Step 1/4: What is your name?",
-            "  (Press Escape at any time to cancel)",
-            "",
-          ],
-          cwd: currentDir,
-          userPrompt: currentUserPrompt,
-        },
-      ]);
+      term.writeln("\r\n  \x1b[1;36m📨 Interactive Contact Wizard\x1b[0m");
+      term.writeln("  ===========================================");
+      term.writeln("  Step 1/4: What is your name? (Press Esc to cancel)");
       setSendState("awaiting_name");
       return;
     }
 
     if (trimmedCmd === "sudo" || trimmedCmd === "login" || trimmedCmd === "admin") {
-      if (currentUser) {
-        setHistory((prev) => [...prev, { command: cmd, output: ["", `  Already authenticated as: ${currentUser.email}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (currentUserRef.current) {
+        term.writeln(`\r\n  Already authenticated as: ${currentUserRef.current.email}`);
         return;
       }
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Starting Admin Authentication Flow...", "  Press Escape at any time to cancel.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("\r\n  Starting Admin Authentication Flow... (Press Esc to cancel)");
+      term.writeln("  Enter Admin Email:");
       setAuthState("awaiting_email");
       return;
     }
 
     if (trimmedCmd === "sudo messages" || trimmedCmd === "messages") {
-      if (!currentUser) {
-        playKeySound("bell", soundEnabled);
-        setHistory((prev) => [...prev, { command: cmd, output: ["", "  Permission Denied: You must be logged in as admin to view messages.", "  Type 'sudo' or 'login' to authenticate.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      if (!currentUserRef.current) {
+        playKeySound("bell", soundEnabledRef.current);
+        term.writeln("\r\n  \x1b[31mPermission Denied: You must be logged in as admin to view messages.\x1b[0m");
+        term.writeln("  Type 'sudo' or 'login' to authenticate.");
         return;
       }
 
-      setHistory((prev) => [...prev, { command: cmd, output: ["", "  Reading contact messages from database..."], cwd: currentDir, userPrompt: currentUserPrompt }]);
-
+      term.writeln("\r\n  Reading contact messages from database...");
       try {
         const { data, error } = await supabase
           .from("contact_messages")
@@ -1161,132 +1233,359 @@ const PortfolioCLI = ({
           .limit(5);
 
         if (error) throw error;
-
         if (!data || data.length === 0) {
-          setHistory((prev) => [...prev, { command: "", output: ["", "  Inbox is empty.", ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+          term.writeln("  Inbox is empty.");
         } else {
-          const lines = ["", "  --- RECENT SUBMISSIONS (Last 5) ---", ""];
+          term.writeln("\r\n  --- RECENT SUBMISSIONS (Last 5) ---");
           data.forEach((msg, idx) => {
-            lines.push(
-              `  [${idx + 1}] FROM: ${msg.name} <${msg.email}>`,
-              `      SUBJ: ${msg.subject}`,
-              `      DATE: ${new Date(msg.created_at).toLocaleString()}`,
-              `      BODY: "${msg.message.length > 60 ? msg.message.slice(0, 57) + '...' : msg.message}"`,
-              ""
-            );
+            term.writeln(`  [${idx + 1}] FROM: ${msg.name} <${msg.email}>`);
+            term.writeln(`      SUBJ: ${msg.subject}`);
+            term.writeln(`      DATE: ${new Date(msg.created_at).toLocaleString()}`);
+            term.writeln(`      BODY: "${msg.message.length > 60 ? msg.message.slice(0, 57) + '...' : msg.message}"\n`);
           });
-          setHistory((prev) => [...prev, { command: "", output: lines, cwd: currentDir, userPrompt: currentUserPrompt }]);
         }
       } catch (err: unknown) {
-        playKeySound("bell", soundEnabled);
+        playKeySound("bell", soundEnabledRef.current);
         const errorMsg = err instanceof Error ? err.message : String(err);
-        setHistory((prev) => [...prev, { command: "", output: ["", `  Error reading messages: ${errorMsg}`, ""], cwd: currentDir, userPrompt: currentUserPrompt }]);
+        term.writeln(`  \x1b[31mError reading messages: ${errorMsg}\x1b[0m`);
       }
       return;
     }
 
     const output = commandsInfo[trimmedCmd];
     if (output) {
-      setHistory((prev) => [...prev, { command: cmd, output: Array.isArray(output) ? output : [output], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      term.writeln("");
+      if (Array.isArray(output)) {
+        output.forEach((l) => term.writeln(l));
+      } else {
+        term.writeln(output);
+      }
     } else {
-      playKeySound("bell", soundEnabled);
-      setHistory((prev) => [...prev, { command: cmd, output: [`Command not found: ${cmd}`, "Type 'help' to see available commands."], cwd: currentDir, userPrompt: currentUserPrompt }]);
+      playKeySound("bell", soundEnabledRef.current);
+      term.writeln(`\r\n  \x1b[31mCommand not found: ${cmd}\x1b[0m`);
+      term.writeln("  Type 'help' to see available commands.");
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (activeView === "top") {
-      if (e.key === "q" || e.key === "Escape") {
-        e.preventDefault();
-        setActiveView("terminal");
+  // Mount xterm.js Canvas safely after Modal Animation
+  useEffect(() => {
+    if (!open) {
+      if (xtermRef.current) {
+        xtermRef.current.dispose();
+        xtermRef.current = null;
+        fitAddonRef.current = null;
       }
       return;
     }
 
-    // Audio triggers for mechanical feedback
-    if (e.key === "Enter") {
-      playKeySound("enter", soundEnabled);
-    } else if (e.key === " ") {
-      playKeySound("space", soundEnabled);
-    } else if (e.key === "Backspace") {
-      playKeySound("backspace", soundEnabled);
-    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      playKeySound("key", soundEnabled);
-    }
+    const initTimer = setTimeout(() => {
+      if (!containerRef.current || xtermRef.current) return;
 
-    if (e.key === "Tab" || (e.key === "ArrowRight" && ghostSuggestion && inputRef.current?.selectionStart === input.length)) {
-      e.preventDefault();
-      if (authState !== "idle" || !input.trim()) return;
+      const currentThemeName = loadTheme();
+      const xTheme = xtermThemeMap[currentThemeName] || xtermThemeMap.default;
 
-      const query = input.toLowerCase().trim();
-      const matches = availableCommands.filter((c) => c.toLowerCase().startsWith(query));
+      const term = new XTerm({
+        cursorBlink: true,
+        fontSize: 13,
+        fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+        theme: xTheme,
+        convertEol: true,
+      });
 
-      if (matches.length === 1) {
-        setInput(matches[0]);
-      } else if (matches.length > 1) {
-        let commonPrefix = matches[0];
-        for (let i = 1; i < matches.length; i++) {
-          while (!matches[i].toLowerCase().startsWith(commonPrefix.toLowerCase())) {
-            commonPrefix = commonPrefix.slice(0, -1);
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(containerRef.current);
+
+      try {
+        fitAddon.fit();
+      } catch {
+        // ignore
+      }
+
+      term.focus();
+
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+
+      // Terminal Welcome Message
+      term.writeln("\x1b[1mWelcome to Portfolio CLI v3.0 (xterm.js VT100 Engine)\x1b[0m \x1b[1;36m⚡\x1b[0m");
+      term.writeln("\x1b[90mSession started: " + new Date().toUTCString() + "\x1b[0m");
+      term.writeln("Type '\x1b[1mhelp\x1b[0m' for commands or '\x1b[1mssh guest@karan-server\x1b[0m' for server mode.");
+      term.write(`\r\n${getPromptString()}`);
+
+      let currentLine = "";
+      let cursorPos = 0;
+      let syncHistoryIdx = -1;
+
+      const getGhostSuggestion = (line: string): string => {
+        if (!line || line.trim() === "") return "";
+        const lowerLine = line.toLowerCase();
+
+        const match = availableCommands.find((cmd) => cmd.toLowerCase().startsWith(lowerLine));
+        if (match && match.length > line.length) {
+          return match.slice(line.length);
+        }
+
+        const parts = line.split(/\s+/);
+        if (parts.length > 1) {
+          const cmdName = parts[0].toLowerCase();
+          const arg = parts.slice(1).join(" ").toLowerCase();
+          if (["cat", "cd", "open", "rm", "touch"].includes(cmdName)) {
+            const currentNode = getNodeAtPath(vfsRef.current, currentDirRef.current);
+            if (currentNode && currentNode.children) {
+              const fileNames = Object.keys(currentNode.children);
+              const fileMatch = fileNames.find((f) => f.toLowerCase().startsWith(arg));
+              if (fileMatch && fileMatch.length > arg.length) {
+                return fileMatch.slice(arg.length);
+              }
+            }
           }
         }
-        if (commonPrefix.length > query.length) {
-          setInput(commonPrefix);
-        } else {
-          playKeySound("bell", soundEnabled);
-          setHistory((prev) => [...prev, { command: input, output: ["Matches: " + matches.join("  |  ")] }]);
+
+        return "";
+      };
+
+      const redrawLine = (line: string, pos: number) => {
+        if (!xtermRef.current) return;
+        const promptStr = getPromptString();
+        const displayLine = authStateRef.current === "awaiting_password" ? "*".repeat(line.length) : line;
+        
+        const ghost = (pos === line.length && authStateRef.current !== "awaiting_password") ? getGhostSuggestion(line) : "";
+        const ghostAnsi = ghost ? `\x1b[90m${ghost}\x1b[0m` : "";
+
+        xtermRef.current.write(`\r${promptStr}${displayLine}${ghostAnsi}\x1b[K`);
+        const moveBack = (displayLine.length + ghost.length) - pos;
+        if (moveBack > 0) {
+          xtermRef.current.write(`\x1b[${moveBack}D`);
         }
-      } else {
-        playKeySound("bell", soundEnabled);
-      }
-      return;
-    }
+      };
 
-    if (e.key === "Escape") {
-      if (sendState !== "idle") {
-        e.preventDefault();
-        setSendState("idle");
-        setSendForm({ name: "", email: "", subject: "", message: "" });
-        setInput("");
-        setHistory((prev) => [...prev, { command: "Cancelled.", output: ["", "  Contact submission cancelled.", ""] }]);
-        return;
-      }
-      if (authState !== "idle") {
-        e.preventDefault();
-        setAuthState("idle");
-        setAuthEmail("");
-        setInput("");
-        setHistory((prev) => [...prev, { command: "Cancelled.", output: [""] }]);
-        return;
-      }
-    }
+      term.onData((data) => {
+        // Audio keypress
+        if (data === "\r") {
+          playKeySound("enter", soundEnabledRef.current);
+        } else if (data === " ") {
+          playKeySound("space", soundEnabledRef.current);
+        } else if (data === "\x7f" || data === "\b") {
+          playKeySound("backspace", soundEnabledRef.current);
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          playKeySound("key", soundEnabledRef.current);
+        }
 
-    if (e.key === "Enter") {
-      handleCommand(input);
-      setInput("");
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (authState !== "idle") return;
-      if (commandHistory.length > 0) {
-        const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex;
-        setHistoryIndex(newIndex);
-        setInput(commandHistory[commandHistory.length - 1 - newIndex] || "");
+        // Enter
+        if (data === "\r") {
+          term.write("\r\n");
+          const fullCmd = currentLine;
+          currentLine = "";
+          cursorPos = 0;
+          syncHistoryIdx = -1;
+          setHistoryIndex(-1);
+
+          handleCommand(fullCmd).then(() => {
+            if (activeViewRef.current !== "top") {
+              writePrompt();
+            }
+          });
+          return;
+        }
+
+        // Backspace
+        if (data === "\x7f" || data === "\b") {
+          if (cursorPos > 0) {
+            currentLine = currentLine.slice(0, cursorPos - 1) + currentLine.slice(cursorPos);
+            cursorPos--;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Ctrl + C
+        if (data === "\x03") {
+          term.write("^C\r\n");
+          currentLine = "";
+          cursorPos = 0;
+          syncHistoryIdx = -1;
+          setHistoryIndex(-1);
+          writePrompt();
+          return;
+        }
+
+        // Ctrl + L
+        if (data === "\x0c") {
+          term.write("\x1b[H\x1b[2J");
+          writePrompt();
+          redrawLine(currentLine, cursorPos);
+          return;
+        }
+
+        // Left Arrow (\x1b[D)
+        if (data === "\x1b[D") {
+          if (cursorPos > 0) {
+            cursorPos--;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Right Arrow (\x1b[C)
+        if (data === "\x1b[C") {
+          if (cursorPos === currentLine.length) {
+            const ghost = getGhostSuggestion(currentLine);
+            if (ghost) {
+              currentLine += ghost;
+              cursorPos = currentLine.length;
+              redrawLine(currentLine, cursorPos);
+              return;
+            }
+          } else if (cursorPos < currentLine.length) {
+            cursorPos++;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Up Arrow (\x1b[A)
+        if (data === "\x1b[A") {
+          const history = commandHistoryRef.current;
+          if (history.length > 0) {
+            if (syncHistoryIdx < history.length - 1) {
+              syncHistoryIdx++;
+              setHistoryIndex(syncHistoryIdx);
+              const targetCmd = history[history.length - 1 - syncHistoryIdx] || "";
+              currentLine = targetCmd;
+              cursorPos = targetCmd.length;
+              redrawLine(currentLine, cursorPos);
+            }
+          }
+          return;
+        }
+
+        // Down Arrow (\x1b[B)
+        if (data === "\x1b[B") {
+          const history = commandHistoryRef.current;
+          if (syncHistoryIdx > 0) {
+            syncHistoryIdx--;
+            setHistoryIndex(syncHistoryIdx);
+            const targetCmd = history[history.length - 1 - syncHistoryIdx] || "";
+            currentLine = targetCmd;
+            cursorPos = targetCmd.length;
+            redrawLine(currentLine, cursorPos);
+          } else if (syncHistoryIdx === 0) {
+            syncHistoryIdx = -1;
+            setHistoryIndex(-1);
+            currentLine = "";
+            cursorPos = 0;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Home key (\x1b[H or \x1b[1~ or \x1b[7~)
+        if (data === "\x1b[H" || data === "\x1b[1~" || data === "\x1b[7~") {
+          if (cursorPos > 0) {
+            cursorPos = 0;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // End key (\x1b[F or \x1b[4~ or \x1b[8~)
+        if (data === "\x1b[F" || data === "\x1b[4~" || data === "\x1b[8~") {
+          if (cursorPos < currentLine.length) {
+            cursorPos = currentLine.length;
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Delete key (\x1b[3~)
+        if (data === "\x1b[3~") {
+          if (cursorPos < currentLine.length) {
+            currentLine = currentLine.slice(0, cursorPos) + currentLine.slice(cursorPos + 1);
+            redrawLine(currentLine, cursorPos);
+          }
+          return;
+        }
+
+        // Tab completion
+        if (data === "\t") {
+          const ghost = getGhostSuggestion(currentLine);
+          if (ghost) {
+            currentLine += ghost;
+            cursorPos = currentLine.length;
+            redrawLine(currentLine, cursorPos);
+            return;
+          }
+          if (currentLine.trim()) {
+            const q = currentLine.toLowerCase().trim();
+            const matches = availableCommands.filter((c) => c.toLowerCase().startsWith(q));
+            if (matches.length > 1) {
+              term.write(`\r\n\x1b[90mMatches: ${matches.join("  |  ")}\x1b[0m`);
+              writePrompt();
+              redrawLine(currentLine, cursorPos);
+            } else {
+              playKeySound("bell", soundEnabledRef.current);
+            }
+          }
+          return;
+        }
+
+        // Normal printable text
+        if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          currentLine = currentLine.slice(0, cursorPos) + data + currentLine.slice(cursorPos);
+          cursorPos++;
+          redrawLine(currentLine, cursorPos);
+        }
+      });
+    }, 150);
+
+    return () => {
+      clearTimeout(initTimer);
+      if (xtermRef.current) {
+        xtermRef.current.dispose();
+        xtermRef.current = null;
+        fitAddonRef.current = null;
       }
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (authState !== "idle") return;
-      if (historyIndex > 0) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        setInput(commandHistory[commandHistory.length - 1 - newIndex] || "");
-      } else {
-        setHistoryIndex(-1);
-        setInput("");
+    };
+  }, [open, writePrompt, getPromptString]);
+
+  // Window Resize Listener
+  useEffect(() => {
+    const handleResize = () => {
+      if (fitAddonRef.current) {
+        try {
+          fitAddonRef.current.fit();
+        } catch {
+          // ignore
+        }
       }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Fit on Fullscreen toggle
+  useEffect(() => {
+    setTimeout(() => {
+      if (fitAddonRef.current) {
+        try {
+          fitAddonRef.current.fit();
+          xtermRef.current?.focus();
+        } catch {
+          // ignore
+        }
+      }
+    }, 200);
+  }, [isFullscreen]);
+
+  const toggleAudio = () => {
+    const nextState = !soundEnabled;
+    setSoundEnabled(nextState);
+    saveSoundSetting(nextState);
+    if (nextState) {
+      playKeySound("key", true);
     }
   };
-
-  const focusInput = () => inputRef.current?.focus();
 
   const handleClose = () => {
     setIsFullscreen(false);
@@ -1303,12 +1602,9 @@ const PortfolioCLI = ({
 
   const handleFullscreen = () => setIsFullscreen(!isFullscreen);
 
-  const topData = generateTopData(topTick);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        ref={dialogContentRef}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         className={`p-0 gap-0 overflow-hidden border-0 bg-transparent [&>button]:hidden transition-all duration-300 ${
@@ -1332,13 +1628,19 @@ const PortfolioCLI = ({
             borderRadius: isFullscreen ? "0px" : "12px",
           }}
           transition={{ duration: 0.4, type: "spring", damping: 25, stiffness: 300 }}
-          className={`w-full overflow-hidden border shadow-2xl transition-all duration-300 ${
+          className={`w-full overflow-hidden border border-white/10 shadow-2xl transition-all duration-300 ${
             isFullscreen ? "rounded-none" : "rounded-xl"
           }`}
-          style={{ fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace" }}
+          style={{
+            fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+            backgroundColor: currentThemeObj.background,
+          }}
         >
           {/* Terminal Header */}
-          <div className={`flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b ${theme.header}`}>
+          <div
+            className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b border-white/10 text-white transition-colors duration-300"
+            style={{ backgroundColor: currentThemeObj.background }}
+          >
             <div className="flex items-center gap-1.5 sm:gap-2">
               <motion.button
                 onClick={handleClose}
@@ -1380,14 +1682,14 @@ const PortfolioCLI = ({
               transition={{ delay: 0.2, duration: 0.3 }}
               className="flex-1 text-center"
             >
-              <span className={`text-xs sm:text-sm font-semibold ${theme.text}`}>
+              <span className="text-xs sm:text-sm font-semibold opacity-80">
                 {sshSession
                   ? `${sshSession.user}@${sshSession.host}:${currentDir}`
                   : `karan@portfolio:${currentDir}`}
               </span>
             </motion.div>
 
-            {/* Sound Toggle Button in Header */}
+            {/* Sound Toggle Button */}
             <motion.button
               onClick={toggleAudio}
               whileHover={{ scale: 1.15 }}
@@ -1404,227 +1706,17 @@ const PortfolioCLI = ({
             </motion.button>
           </div>
 
-          {/* Terminal Body */}
-          <motion.div
-            ref={terminalRef}
-            onClick={focusInput}
-            onPointerDown={(e) => e.stopPropagation()}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.4 }}
-            className={`${theme.bg} ${theme.text} p-3 sm:p-4 overflow-y-auto cursor-text text-xs sm:text-sm ${
+          {/* xterm.js Canvas Body Container */}
+          <div
+            ref={containerRef}
+            onClick={() => xtermRef.current?.focus()}
+            className={`w-full p-0 overflow-hidden cursor-text transition-colors duration-300 ${
               isFullscreen
                 ? "h-[calc(100vh-48px)]"
                 : "h-[75vh] sm:h-[75vh] md:h-[60vh] lg:h-[500px]"
             }`}
-          >
-            {activeView === "top" ? (
-              /* Dynamic Live TOP / HTOP Process Monitor Screen */
-              <div className="font-mono text-xs select-none">
-                <div className="flex justify-between items-center border-b border-white/20 pb-2 mb-2">
-                  <span className="font-bold text-amber-400">top - {topData.uptimeStr}</span>
-                  <span className="text-emerald-400 animate-pulse">● LIVE (Press 'q' or Esc to exit)</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                  <div>
-                    <p>Tasks: <span className="font-bold text-white">{topData.tasksCount}</span> total, <span className="text-emerald-400">{topData.runningCount}</span> running, <span className="text-white/70">{topData.sleepingCount}</span> sleeping</p>
-                    <p>%Cpu(s): <span className="text-cyan-400 font-bold">{topData.cpuVal}%</span> us, 2.1% sy, 0.0% ni, 85.5% id</p>
-                  </div>
-                  <div>
-                    <p>MiB Mem : <span className="text-purple-400 font-bold">{topData.memVal}%</span> used (3840.2 / 16284.0 MB)</p>
-                    <p>Load Avg: <span className="text-yellow-300">{topData.loadAvg}</span></p>
-                  </div>
-                </div>
-
-                {/* Progress bars */}
-                <div className="space-y-1 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-xs">CPU:</span>
-                    <div className="flex-1 bg-white/10 h-3 rounded overflow-hidden">
-                      <div className="bg-cyan-400 h-full transition-all duration-300" style={{ width: `${topData.cpuVal}%` }}></div>
-                    </div>
-                    <span className="w-12 text-right">{topData.cpuVal}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-xs">MEM:</span>
-                    <div className="flex-1 bg-white/10 h-3 rounded overflow-hidden">
-                      <div className="bg-purple-400 h-full transition-all duration-300" style={{ width: `${topData.memVal}%` }}></div>
-                    </div>
-                    <span className="w-12 text-right">{topData.memVal}%</span>
-                  </div>
-                </div>
-
-                {/* Process Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white/10 text-emerald-400 border-b border-white/20">
-                        <th className="py-1 px-2">PID</th>
-                        <th className="py-1 px-2">USER</th>
-                        <th className="py-1 px-2">PR</th>
-                        <th className="py-1 px-2">NI</th>
-                        <th className="py-1 px-2">VIRT</th>
-                        <th className="py-1 px-2">RES</th>
-                        <th className="py-1 px-2">%CPU</th>
-                        <th className="py-1 px-2">%MEM</th>
-                        <th className="py-1 px-2">TIME+</th>
-                        <th className="py-1 px-2">COMMAND</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topData.processes.map((proc) => (
-                        <tr key={proc.pid} className="border-b border-white/5 hover:bg-white/5">
-                          <td className="py-1 px-2 text-cyan-300">{proc.pid}</td>
-                          <td className="py-1 px-2">{proc.user}</td>
-                          <td className="py-1 px-2">{proc.pr}</td>
-                          <td className="py-1 px-2">{proc.ni}</td>
-                          <td className="py-1 px-2">{proc.virt}</td>
-                          <td className="py-1 px-2">{proc.res}</td>
-                          <td className="py-1 px-2 font-bold text-amber-300">{proc.cpu.toFixed(1)}</td>
-                          <td className="py-1 px-2 text-purple-300">{proc.mem.toFixed(1)}</td>
-                          <td className="py-1 px-2">{proc.time}</td>
-                          <td className="py-1 px-2 font-semibold">{proc.command}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              /* Standard Terminal Shell Output */
-              <>
-                {/* Welcome Message & Session Date/Time */}
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-                  <p className="font-semibold mb-1 text-xs sm:text-sm flex items-center gap-2">
-                    <span>Welcome to Portfolio CLI v2.5 (Virtual OS + Mechanical Audio)</span>
-                    <span className={theme.accent}>⚡</span>
-                  </p>
-                  <p className="opacity-60 mb-3 text-xs">
-                    Session started: {sessionStartTime}
-                  </p>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
-                  <p className="opacity-80 mb-3 sm:mb-4 text-xs sm:text-sm">
-                    Type '<span className="font-bold underline">help</span>' for server commands or '
-                    <span className="font-bold underline">sound on</span>' to turn on mechanical keyboard audio.
-                  </p>
-                </motion.div>
-
-                {/* Command History */}
-                <AnimatePresence mode="popLayout">
-                  {history.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -10, height: 0 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="mb-2 sm:mb-3 overflow-hidden"
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                        <span className={theme.prompt}>
-                          {item.userPrompt || (currentUser ? "admin@karan" : "dev@karan")}
-                        </span>
-                        <span className="opacity-50">{item.cwd || "~"}</span>
-                        <span className="opacity-50">$</span>
-                        <motion.span
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2 }}
-                          className="font-bold"
-                        >
-                          {item.command}
-                        </motion.span>
-                      </div>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.1, duration: 0.3 }}
-                        className="mt-1 opacity-90"
-                      >
-                        <AnimatePresence>
-                          {item.output.map((line, lineIndex) => (
-                            <motion.div
-                              key={lineIndex}
-                              initial={{ opacity: 0, x: -5 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -5 }}
-                              transition={{ delay: lineIndex * 0.02, duration: 0.2 }}
-                              className="whitespace-pre overflow-x-auto"
-                            >
-                              {line || "\u00A0"}
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </motion.div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {/* Current Input Line */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4, duration: 0.3 }}
-                  className="flex items-center gap-1 sm:gap-2 flex-wrap w-full mt-2"
-                >
-                  {sendState === "awaiting_name" ? (
-                    <span className={`${theme.accent} font-medium`}>Step 1/4 (Your Name):</span>
-                  ) : sendState === "awaiting_email" ? (
-                    <span className={`${theme.accent} font-medium`}>Step 2/4 (Your Email):</span>
-                  ) : sendState === "awaiting_subject" ? (
-                    <span className={`${theme.accent} font-medium`}>Step 3/4 (Subject):</span>
-                  ) : sendState === "awaiting_message" ? (
-                    <span className={`${theme.accent} font-medium`}>Step 4/4 (Message):</span>
-                  ) : sendState === "submitting" ? (
-                    <span className="opacity-60 animate-pulse">Delivering message...</span>
-                  ) : authState === "awaiting_email" ? (
-                    <span className="text-cyan-400">Enter Email:</span>
-                  ) : authState === "awaiting_password" ? (
-                    <span className="text-cyan-400">Enter Password:</span>
-                  ) : authState === "authenticating" ? (
-                    <span className="opacity-60 animate-pulse">Authenticating...</span>
-                  ) : (
-                    <>
-                      <span className={theme.prompt}>
-                        {sshSession
-                          ? `${sshSession.user}@${sshSession.host}`
-                          : currentUser
-                          ? "admin@karan"
-                          : "dev@karan"}
-                      </span>
-                      <span className="opacity-50">{currentDir}</span>
-                      <span className="opacity-50">
-                        {sshSession?.user === "root" || currentUser ? "#" : "$"}
-                      </span>
-                    </>
-                  )}
-
-                  {authState !== "authenticating" && sendState !== "submitting" && (
-                    <div className="relative flex-1 min-w-[150px] flex items-center">
-                      <input
-                        ref={inputRef}
-                        type={authState === "awaiting_password" ? "password" : "text"}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className="w-full bg-transparent outline-none caret-current transition-all z-10 font-mono"
-                        spellCheck={false}
-                        autoComplete="off"
-                      />
-                      {ghostSuggestion && (
-                        <span className="absolute left-0 pointer-events-none opacity-40 whitespace-pre select-none z-0 font-mono">
-                          <span className="opacity-0">{input}</span>
-                          {ghostSuggestion}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </motion.div>
-              </>
-            )}
-          </motion.div>
+            style={{ backgroundColor: currentThemeObj.background }}
+          />
         </motion.div>
       </DialogContent>
     </Dialog>
@@ -1669,7 +1761,7 @@ export const FixedTerminalButton = () => {
         aria-label={isMinimized ? "Restore Terminal" : "Open Terminal"}
       >
         <div>
-          <Terminal size={20} className="text-[hsl(175,100%,50%)]" />
+          <TerminalIcon size={20} className="text-[hsl(175,100%,50%)]" />
         </div>
         {isMinimized && (
           <motion.span

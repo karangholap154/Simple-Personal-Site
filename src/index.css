@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap");
+@import "@xterm/xterm/css/xterm.css";
 
 /* Hide scrollbar while maintaining scroll functionality */
 html {
@@ -118,15 +119,46 @@ html::-webkit-scrollbar {
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground font-sans antialiased text-lg;
-    font-family: "EB Garamond", serif;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
 
-  ::selection {
-    @apply bg-primary/20;
-  }
+/* Custom scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Custom Selection */
+::selection {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+/* Internal xterm.js canvas padding & seamless viewport fitting */
+.xterm {
+  height: 100%;
+  padding: 6px 12px;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+  background-color: transparent !important;
 }
 
 @layer utilities {
