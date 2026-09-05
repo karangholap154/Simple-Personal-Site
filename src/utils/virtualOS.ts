@@ -10,10 +10,6 @@ export interface VFSNode {
   children?: Record<string, VFSNode>;
 }
 
-export interface VFSTree {
-  root: VFSNode;
-}
-
 const STORAGE_KEY_VFS = "portfolio_vfs_data";
 const STORAGE_KEY_THEME = "portfolio_cli_theme";
 
@@ -344,7 +340,7 @@ export const executeMkdir = (
 
   if (!newDirName) return { success: false, message: "  mkdir: invalid directory name" };
 
-  const cloneRoot = JSON.parse(JSON.stringify(root)) as VFSNode;
+  const cloneRoot = structuredClone(root);
   const parentNode = getNodeAtPath(cloneRoot, parentPath);
 
   if (!parentNode || parentNode.type !== "dir") {
@@ -384,7 +380,7 @@ export const executeTouch = (
 
   if (!newFileName) return { success: false, message: "  touch: invalid file name" };
 
-  const cloneRoot = JSON.parse(JSON.stringify(root)) as VFSNode;
+  const cloneRoot = structuredClone(root);
   const parentNode = getNodeAtPath(cloneRoot, parentPath);
 
   if (!parentNode || parentNode.type !== "dir") {
@@ -430,7 +426,7 @@ export const executeRm = (
 
   if (!nodeToDelete) return { success: false, message: "  rm: invalid operand" };
 
-  const cloneRoot = JSON.parse(JSON.stringify(root)) as VFSNode;
+  const cloneRoot = structuredClone(root);
   const parentNode = getNodeAtPath(cloneRoot, parentPath);
 
   if (!parentNode || !parentNode.children || !parentNode.children[nodeToDelete]) {
@@ -474,7 +470,7 @@ export const executeWriteFile = (
 
   if (!fileName) return { success: false, message: "  Invalid filename" };
 
-  const cloneRoot = JSON.parse(JSON.stringify(root)) as VFSNode;
+  const cloneRoot = structuredClone(root);
   const parentNode = getNodeAtPath(cloneRoot, parentPath);
 
   if (!parentNode || parentNode.type !== "dir") {
@@ -501,7 +497,7 @@ export const executeWriteFile = (
   return { success: true, message: `  Wrote to '${fileName}' (${newContent.length} bytes)`, updatedRoot: cloneRoot };
 };
 
-export const serversInfo: Record<string, { os: string; ip: string; user: string }> = {
+const serversInfo: Record<string, { os: string; ip: string; user: string }> = {
   "karan-server": { os: "Ubuntu 24.04.1 LTS (GNU/Linux 6.8.0-40-generic x86_64)", ip: "192.168.1.100", user: "guest" },
   "karan-server.dev": { os: "Ubuntu 24.04.1 LTS (GNU/Linux 6.8.0-40-generic x86_64)", ip: "192.168.1.100", user: "guest" },
   "academy-server": { os: "Debian GNU/Linux 12 (bookworm) x86_64", ip: "10.0.4.15", user: "admin" },
@@ -627,4 +623,3 @@ export const executeNetstat = (): string[] => [
   "  tcp        0      0 127.0.0.1:3000          0.0.0.0:*               LISTEN      1204/node",
   "",
 ];
-
