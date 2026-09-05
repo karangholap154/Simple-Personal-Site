@@ -16,6 +16,7 @@ import {
   loadTheme,
   saveTheme,
   resolvePath,
+  getNodeAtPath,
   formatLsOutput,
   executeMkdir,
   executeTouch,
@@ -28,7 +29,6 @@ import {
   executeDf,
   executeFree,
   executeNetstat,
-  themes,
   VFSNode,
 } from "@/utils/virtualOS";
 import {
@@ -282,7 +282,6 @@ const commandsInfo: Record<string, string | string[]> = {
 interface PortfolioCLIProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  isMinimizedGlobally?: boolean;
   onMinimizeChange?: (minimized: boolean) => void;
 }
 
@@ -313,7 +312,6 @@ const PortfolioCLI = ({
   const [sshSession, setSshSession] = useState<{ isConnected: boolean; host: string; user: string } | null>(null);
   const [activeView, setActiveView] = useState<"terminal" | "top">("terminal");
   const [themeName, setThemeName] = useState<string>(loadTheme);
-  const [topTick, setTopTick] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(loadSoundSetting);
 
   const [commandHistory, setCommandHistory] = useState<string[]>(() => {
@@ -324,7 +322,6 @@ const PortfolioCLI = ({
       return [];
     }
   });
-  const [historyIndex, setHistoryIndex] = useState(-1);
 
   type SendState = "idle" | "awaiting_name" | "awaiting_email" | "awaiting_subject" | "awaiting_message" | "submitting";
   const [sendState, setSendState] = useState<SendState>("idle");
@@ -362,9 +359,6 @@ const PortfolioCLI = ({
 
   const activeViewRef = useRef(activeView);
   activeViewRef.current = activeView;
-
-  const historyIndexRef = useRef(historyIndex);
-  historyIndexRef.current = historyIndex;
 
   const commandHistoryRef = useRef(commandHistory);
   commandHistoryRef.current = commandHistory;
@@ -424,7 +418,6 @@ const PortfolioCLI = ({
       let currentTick = 0;
       timer = setInterval(() => {
         currentTick += 1;
-        setTopTick(currentTick);
         const topData = generateTopData(currentTick);
         const term = xtermRef.current;
         if (!term) return;
@@ -657,7 +650,6 @@ const PortfolioCLI = ({
     if (!trimmedCmd) return;
 
     setCommandHistory((prev) => [...prev, trimmedInput]);
-    setHistoryIndex(-1);
 
     // Audio Commands
     if (trimmedCmd === "sound" || trimmedCmd === "sound status") {
@@ -781,7 +773,7 @@ const PortfolioCLI = ({
 
       if (sub.startsWith("set ")) {
         const tName = sub.slice(4).trim().toLowerCase();
-        if (themes[tName] && xtermRef.current) {
+        if (xtermThemeMap[tName] && xtermRef.current) {
           setThemeName(tName);
           saveTheme(tName);
           const xTheme = xtermThemeMap[tName] || xtermThemeMap.default;
@@ -1379,7 +1371,6 @@ const PortfolioCLI = ({
           currentLine = "";
           cursorPos = 0;
           syncHistoryIdx = -1;
-          setHistoryIndex(-1);
 
           handleCommand(fullCmd).then(() => {
             if (activeViewRef.current !== "top") {
@@ -1405,7 +1396,6 @@ const PortfolioCLI = ({
           currentLine = "";
           cursorPos = 0;
           syncHistoryIdx = -1;
-          setHistoryIndex(-1);
           writePrompt();
           return;
         }
@@ -1450,7 +1440,6 @@ const PortfolioCLI = ({
           if (history.length > 0) {
             if (syncHistoryIdx < history.length - 1) {
               syncHistoryIdx++;
-              setHistoryIndex(syncHistoryIdx);
               const targetCmd = history[history.length - 1 - syncHistoryIdx] || "";
               currentLine = targetCmd;
               cursorPos = targetCmd.length;
@@ -1465,14 +1454,12 @@ const PortfolioCLI = ({
           const history = commandHistoryRef.current;
           if (syncHistoryIdx > 0) {
             syncHistoryIdx--;
-            setHistoryIndex(syncHistoryIdx);
             const targetCmd = history[history.length - 1 - syncHistoryIdx] || "";
             currentLine = targetCmd;
             cursorPos = targetCmd.length;
             redrawLine(currentLine, cursorPos);
           } else if (syncHistoryIdx === 0) {
             syncHistoryIdx = -1;
-            setHistoryIndex(-1);
             currentLine = "";
             cursorPos = 0;
             redrawLine(currentLine, cursorPos);
