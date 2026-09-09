@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { ExpenseItem } from "@/types/expenses";
 
 import {
   loadVFS,
@@ -261,6 +262,8 @@ export const PortfolioCLI = ({
       "private-academy": "/private-academy",
       academy: "/private-academy",
       support: "/support",
+      expenses: "/expenses",
+      expense: "/expenses",
       admin: "/admin",
     };
 
@@ -696,6 +699,114 @@ export const PortfolioCLI = ({
         term.writeln(`    \x1b[31mNo matching skills found for "${termQuery}"\x1b[0m`);
       }
       return;
+    }
+
+    if (trimmedCmd === "expense" || trimmedCmd === "expenses" || trimmedCmd.startsWith("expense ")) {
+      if (trimmedCmd === "expense" || trimmedCmd === "expenses") {
+        navigate("/expenses");
+        term.writeln("\r\n  \x1b[32mOpening Daily Expense Tracker (/expenses)...\x1b[0m");
+        if (!s.currentUser) {
+          term.writeln("  \x1b[33m🔒 Note:\x1b[0m Admin login required to log or view personal expenses.");
+          term.writeln("  Type '\x1b[32mlogin\x1b[0m' or '\x1b[32msudo\x1b[0m' to authenticate.");
+          term.writeln("  \x1b[90m(⚡ Something crazy is brewing for visitors on this page — stay tuned!)\x1b[0m");
+        } else {
+          term.writeln("  Commands:");
+          term.writeln("    \x1b[36mexpense add <amount> <category> [notes]\x1b[0m - Quick log an expense");
+          term.writeln("    \x1b[36mexpense list\x1b[0m                             - Show recent expenses");
+          term.writeln("    \x1b[36mexpense today\x1b[0m                            - Show today's total");
+        }
+        return;
+      }
+
+      if (trimmedCmd === "expense today") {
+        if (!s.currentUser) {
+          term.writeln("\r\n  \x1b[1;33m🔒 Authentication Required\x1b[0m");
+          term.writeln("  You must be logged in as admin to view private daily expenses.");
+          term.writeln("  Type '\x1b[32mlogin\x1b[0m' or '\x1b[32msudo\x1b[0m' to authenticate.");
+          return;
+        }
+
+        try {
+          const { data, error } = await supabase.from("expenses").select("*");
+          if (error) throw error;
+          const items = (data as ExpenseItem[]) || [];
+          const todayDate = new Date().toISOString().slice(0, 10);
+          const todayItems = items.filter((i) => i.date && i.date.startsWith(todayDate));
+          const total = todayItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+          term.writeln(`\r\n  \x1b[1;32m📅 TODAY'S EXPENSES: ₹${total.toLocaleString()}\x1b[0m (${todayItems.length} items)`);
+          todayItems.forEach((it) => {
+            term.writeln(`    • ₹${it.amount} - ${it.category}: ${it.notes || "No notes"}`);
+          });
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          term.writeln(`\r\n  \x1b[31mError fetching today's expenses: ${errMsg}\x1b[0m`);
+        }
+        return;
+      }
+
+      if (trimmedCmd === "expense list") {
+        if (!s.currentUser) {
+          term.writeln("\r\n  \x1b[1;33m🔒 Authentication Required\x1b[0m");
+          term.writeln("  You must be logged in as admin to view transaction history.");
+          term.writeln("  Type '\x1b[32mlogin\x1b[0m' or '\x1b[32msudo\x1b[0m' to authenticate.");
+          return;
+        }
+
+        try {
+          const { data, error } = await supabase.from("expenses").select("*").order("date", { ascending: false }).limit(5);
+          if (error) throw error;
+          const items = (data as ExpenseItem[]) || [];
+          term.writeln("\r\n  \x1b[1;36m💳 RECENT EXPENSES\x1b[0m");
+          if (items.length === 0) {
+            term.writeln("  No expenses logged yet.");
+          } else {
+            items.forEach((it) => {
+              term.writeln(`    • ₹${it.amount} [${it.category}] - ${it.notes || "No notes"} (${it.payment_method || "UPI"})`);
+            });
+          }
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          term.writeln(`\r\n  \x1b[31mError: ${errMsg}\x1b[0m`);
+        }
+        return;
+      }
+
+      if (trimmedCmd.startsWith("expense add ")) {
+        if (!s.currentUser) {
+          term.writeln("\r\n  \x1b[1;33m🔒 Authentication Required\x1b[0m");
+          term.writeln("  To log daily expenses, you must be logged in as administrator.");
+          term.writeln("  Type '\x1b[32mlogin\x1b[0m' or '\x1b[32msudo\x1b[0m' to authenticate.");
+          term.writeln("  \x1b[90m(⚡ Something crazy is brewing for visitors on this page — stay tuned!)\x1b[0m");
+          return;
+        }
+
+        const parts = trimmedCmd.replace(/^expense add\s+/, "").trim().split(/\s+/);
+        const amount = parseFloat(parts[0]);
+        if (isNaN(amount) || amount <= 0) {
+          term.writeln("\r\n  \x1b[31mUsage: expense add <amount> <category> [notes]\x1b[0m");
+          term.writeln("  Example: expense add 150 food \"Cafe Lunch\"");
+          return;
+        }
+        const categoryArg = parts[1] || "Other";
+        const notesArg = parts.slice(2).join(" ").replace(/^["']|["']$/g, "") || "Logged from CLI";
+        
+        try {
+          const { error } = await supabase.from("expenses").insert([{
+            user_id: s.currentUser.id,
+            amount,
+            category: categoryArg,
+            notes: notesArg,
+            payment_method: "UPI",
+            date: new Date().toISOString()
+          }]);
+          if (error) throw error;
+          term.writeln(`\r\n  \x1b[32m✔ Logged expense: ₹${amount} for ${categoryArg} (${notesArg})\x1b[0m`);
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          term.writeln(`\r\n  \x1b[31mFailed to log expense: ${errMsg}\x1b[0m`);
+        }
+        return;
+      }
     }
 
     if (trimmedCmd.startsWith("projects filter")) {

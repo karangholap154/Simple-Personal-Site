@@ -54,6 +54,7 @@ export const helpList = [
   "    \x1b[32mdownload\x1b[0m               - Download resume PDF",
   "",
   "  \x1b[1;36m⚡ UTILITIES & HELPERS\x1b[0m",
+  "    \x1b[32mexpense [add|list|today]\x1b[0m  - Quick daily expense tracker & logger",
   "    \x1b[32msend\x1b[0m                   - Launch interactive message wizard to contact Karan",
   "    \x1b[32mtime / tz\x1b[0m              - Display Pune, India timezone & local time",
   "    \x1b[32mcalc [expr]\x1b[0m            - Calculate a math expression (e.g. calc 25 * 4)",
@@ -79,7 +80,8 @@ export const availableCommands = [
   "ssh", "ssh guest@karan-server", "exit", "top", "htop", "ping", "df", "df -h", "free", "free -m", "netstat",
   "sound", "sound on", "sound off", "sound toggle",
   "theme", "theme set matrix", "theme set dracula", "theme set cyberpunk", "theme set ubuntu", "theme set default",
-  "time", "tz", "calc", "shortcuts", "whoami", "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help"
+  "time", "tz", "calc", "shortcuts", "whoami", "echo", "send", "sudo", "login", "logout", "messages", "sudo messages", "clear", "help",
+  "expense", "expense add", "expense list", "expense today", "expenses"
 ];
 
 export const readmeOutput = [

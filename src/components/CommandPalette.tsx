@@ -16,6 +16,7 @@ import {
   Image,
   GraduationCap,
   Coffee,
+  Wallet,
   Github,
   Linkedin,
   Twitter,
@@ -55,6 +56,7 @@ const CommandPalette = () => {
     { name: "Resume", icon: FileText, href: "/resume" },
     { name: "Contact", icon: Mail, href: "/contact" },
     { name: "Gallery", icon: Image, href: "/gallery" },
+    { name: "Daily Expense Tracker", icon: Wallet, href: "/expenses" },
     { name: "Private Academy", icon: GraduationCap, href: "/private-academy" },
     { name: "Support", icon: Coffee, href: "/support" },
   ];
