@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
@@ -8,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Lock, Mail, Briefcase, GraduationCap, Award, Trash2, Edit, Plus, 
-  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2, Activity
+  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2, Activity, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -538,8 +539,8 @@ const Admin = () => {
     return (
       <PageTransition>
         <div className="min-h-screen bg-background flex flex-col justify-between">
-          <div className="max-w-2xl mx-auto px-6 w-full flex-grow flex flex-col justify-center items-center py-20">
-            <div className="w-full max-w-md bg-secondary/30 border border-border p-8 rounded-xl shadow-xl backdrop-blur-sm">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 w-full flex-grow flex flex-col justify-center items-center py-12 sm:py-20">
+            <div className="w-full max-w-md bg-secondary/30 border border-border p-5 sm:p-8 rounded-xl shadow-xl backdrop-blur-sm">
               <div className="flex flex-col items-center gap-2 mb-6">
                 <div className="p-3 bg-primary/10 rounded-full text-primary">
                   <Lock className="h-6 w-6" />
@@ -584,6 +585,9 @@ const Admin = () => {
               </form>
             </div>
           </div>
+          <div className="w-full max-w-2xl mx-auto px-6">
+            <Footer />
+          </div>
         </div>
       </PageTransition>
     );
@@ -592,35 +596,55 @@ const Admin = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-background flex flex-col justify-between">
-        <div className="max-w-4xl mx-auto px-6 w-full py-8">
-          <div className="flex justify-between items-center mb-8 border-b border-border pb-4">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <span>⚙️</span> Portfolio Control Panel
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 w-full py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8 border-b border-border pb-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Link
+                  to="/"
+                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors group"
+                >
+                  <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
+                  <span>Back to Site</span>
+                </Link>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                <span>⚙️</span>
+                <span className="truncate">Portfolio Control Panel</span>
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Signed in as: {session.user.email}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                Signed in as: <span className="text-foreground/80 font-mono">{session.user.email}</span>
+              </p>
             </div>
-            <Button variant="outline" size="sm" onClick={handleSignOut} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <Button variant="outline" size="sm" onClick={handleSignOut} className="flex items-center gap-1.5 text-xs">
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Sign Out</span>
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-secondary/40 w-full justify-start border border-border">
-              <TabsTrigger value="messages" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" /> Messages
-              </TabsTrigger>
-              <TabsTrigger value="projects" className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4" /> Projects
-              </TabsTrigger>
-              <TabsTrigger value="now" className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-emerald-500" /> Now Status
-              </TabsTrigger>
-              <TabsTrigger value="resume" className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" /> Resume Sections
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+              <TabsList className="bg-secondary/40 w-max sm:w-full justify-start border border-border p-1 gap-1 h-auto flex-nowrap">
+                <TabsTrigger value="messages" className="flex items-center gap-1.5 shrink-0 text-xs sm:text-sm py-1.5 px-3">
+                  <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span>Messages</span>
+                </TabsTrigger>
+                <TabsTrigger value="projects" className="flex items-center gap-1.5 shrink-0 text-xs sm:text-sm py-1.5 px-3">
+                  <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span>Projects</span>
+                </TabsTrigger>
+                <TabsTrigger value="now" className="flex items-center gap-1.5 shrink-0 text-xs sm:text-sm py-1.5 px-3">
+                  <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500 shrink-0" />
+                  <span>Now Status</span>
+                </TabsTrigger>
+                <TabsTrigger value="resume" className="flex items-center gap-1.5 shrink-0 text-xs sm:text-sm py-1.5 px-3">
+                  <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span>Resume Sections</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* TAB: NOW STATUS */}
             <TabsContent value="now" className="space-y-4 outline-none">
@@ -691,18 +715,18 @@ const Admin = () => {
               ) : (
                 <div className="space-y-4">
                   {messages?.map((msg: ContactMessage) => (
-                    <div key={msg.id} className="p-5 bg-secondary/30 border border-border rounded-lg space-y-3 relative group">
-                      <div className="flex justify-between items-start flex-wrap gap-2">
-                        <div>
-                          <h3 className="font-semibold text-sm flex items-center gap-2">
-                            {msg.name}
-                            <span className="text-xs font-normal text-muted-foreground">({msg.email})</span>
+                    <div key={msg.id} className="p-4 sm:p-5 bg-secondary/30 border border-border rounded-lg space-y-3 relative group overflow-hidden">
+                      <div className="flex justify-between items-start flex-col sm:flex-row gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm flex items-center flex-wrap gap-1.5 break-words">
+                            <span>{msg.name}</span>
+                            <span className="text-xs font-normal text-muted-foreground break-all">({msg.email})</span>
                           </h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5 break-words">
                             Subject: <span className="text-foreground font-medium">{msg.subject}</span>
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end sm:self-start shrink-0">
                           <select
                             value={msg.status}
                             onChange={(e) => updateMessageStatusMutation.mutate({ id: msg.id, status: e.target.value })}
@@ -715,7 +739,7 @@ const Admin = () => {
                           <Button 
                             variant="destructive" 
                             size="icon" 
-                            className="h-7 w-7" 
+                            className="h-7 w-7 shrink-0" 
                             onClick={() => {
                               if (confirm("Delete this message?")) deleteMessageMutation.mutate(msg.id);
                             }}
@@ -724,11 +748,11 @@ const Admin = () => {
                           </Button>
                         </div>
                       </div>
-                      <p className="text-sm bg-background/40 p-3 rounded text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      <p className="text-sm bg-background/40 p-3 rounded text-foreground/90 whitespace-pre-wrap leading-relaxed break-words">
                         {msg.message}
                       </p>
-                      <div className="text-[10px] text-muted-foreground flex justify-between">
-                        <span>Submitted on: {new Date(msg.created_at).toLocaleString()}</span>
+                      <div className="text-[10px] text-muted-foreground flex justify-between flex-wrap gap-1">
+                        <span>Submitted: {new Date(msg.created_at).toLocaleString()}</span>
                         <span className="capitalize font-semibold text-primary/80">Status: {msg.status}</span>
                       </div>
                     </div>
@@ -955,8 +979,8 @@ const Admin = () => {
                   <Skeleton className="h-10 w-full" />
                 </div>
               ) : (
-                <div className="border border-border rounded-lg overflow-hidden bg-secondary/10">
-                  <table className="w-full text-left border-collapse text-sm">
+                <div className="border border-border rounded-lg overflow-hidden bg-secondary/10 overflow-x-auto scrollbar-none">
+                  <table className="w-full min-w-[500px] text-left border-collapse text-sm">
                     <thead>
                       <tr className="bg-secondary/40 border-b border-border text-muted-foreground text-xs font-semibold">
                         <th className="p-3">Pos</th>
@@ -1006,17 +1030,17 @@ const Admin = () => {
             {/* TAB: RESUME */}
             <TabsContent value="resume" className="space-y-6 outline-none">
               {/* PDF Resume Upload Only */}
-              <form onSubmit={handleUploadPdf} className="p-5 bg-secondary/30 border border-border rounded-lg space-y-4">
-                <div className="flex justify-between items-center flex-wrap gap-2">
+              <form onSubmit={handleUploadPdf} className="p-4 sm:p-5 bg-secondary/30 border border-border rounded-lg space-y-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                   <div>
                     <h3 className="font-semibold text-sm flex items-center gap-2">
-                      <FileUp className="h-4 w-4 text-primary" /> Upload Resume PDF
+                      <FileUp className="h-4 w-4 text-primary shrink-0" /> Upload Resume PDF
                     </h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Select a new PDF file from your computer to update your downloadable resume.
                     </p>
                   </div>
-                  <Button type="submit" size="sm" disabled={uploadingPdf || !selectedPdfFile} className="flex items-center gap-2">
+                  <Button type="submit" size="sm" disabled={uploadingPdf || !selectedPdfFile} className="flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
                     {uploadingPdf ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1040,14 +1064,14 @@ const Admin = () => {
                     className="bg-background cursor-pointer text-xs"
                   />
                   {selectedPdfFile && (
-                    <p className="text-[11px] text-primary font-medium mt-1">Selected file: {selectedPdfFile.name}</p>
+                    <p className="text-[11px] text-primary font-medium mt-1 truncate">Selected file: {selectedPdfFile.name}</p>
                   )}
                 </div>
 
                 {activePdfUrl && (
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-2 border-t border-border/50">
-                    <span>Active Published Resume:</span>
-                    <a href={activePdfUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono truncate max-w-md">
+                  <div className="text-[11px] text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 pt-2 border-t border-border/50 break-all">
+                    <span className="shrink-0 font-medium">Active Published Resume:</span>
+                    <a href={activePdfUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono truncate max-w-full">
                       {activePdfUrl}
                     </a>
                   </div>
@@ -1055,24 +1079,26 @@ const Admin = () => {
               </form>
 
               <Tabs defaultValue="edu" className="space-y-4">
-                <TabsList className="bg-secondary/20 justify-start border border-border/80">
-                  <TabsTrigger value="edu" className="flex items-center gap-1 text-xs">
-                    <GraduationCap className="h-3.5 w-3.5" /> Education
-                  </TabsTrigger>
-                  <TabsTrigger value="exp" className="flex items-center gap-1 text-xs">
-                    <Briefcase className="h-3.5 w-3.5" /> Experience
-                  </TabsTrigger>
-                  <TabsTrigger value="certs" className="flex items-center gap-1 text-xs">
-                    <Award className="h-3.5 w-3.5" /> Certifications
-                  </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto scrollbar-none pb-1">
+                  <TabsList className="bg-secondary/20 justify-start border border-border/80 w-max sm:w-auto">
+                    <TabsTrigger value="edu" className="flex items-center gap-1 text-xs shrink-0">
+                      <GraduationCap className="h-3.5 w-3.5" /> Education
+                    </TabsTrigger>
+                    <TabsTrigger value="exp" className="flex items-center gap-1 text-xs shrink-0">
+                      <Briefcase className="h-3.5 w-3.5" /> Experience
+                    </TabsTrigger>
+                    <TabsTrigger value="certs" className="flex items-center gap-1 text-xs shrink-0">
+                      <Award className="h-3.5 w-3.5" /> Certifications
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 {/* SUB-TAB: EDUCATION */}
                 <TabsContent value="edu" className="space-y-4 outline-none">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center gap-2">
                     <h3 className="font-semibold text-sm">Manage Education History</h3>
                     {!showEduForm && (
-                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowEduForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1 shrink-0" onClick={() => setShowEduForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Entry
                       </Button>
                     )}
@@ -1081,7 +1107,7 @@ const Admin = () => {
                   {showEduForm && (
                     <form onSubmit={handleSaveEdu} className="p-4 bg-secondary/20 border border-border rounded-lg space-y-3 relative">
                       <button type="button" onClick={() => { setShowEduForm(false); setEditingEduId(null); }} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Degree</label>
                           <Input value={eduForm.degree} onChange={(e) => setEduForm({ ...eduForm, degree: e.target.value })} required />
@@ -1091,7 +1117,7 @@ const Admin = () => {
                           <Input value={eduForm.institution} onChange={(e) => setEduForm({ ...eduForm, institution: e.target.value })} required />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Duration (years)</label>
                           <Input placeholder="2022 - 2025" value={eduForm.duration} onChange={(e) => setEduForm({ ...eduForm, duration: e.target.value })} required />
@@ -1110,12 +1136,12 @@ const Admin = () => {
 
                   <div className="space-y-2">
                     {education?.map((item: EducationItem) => (
-                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
-                        <div>
-                          <p className="font-semibold">{item.degree}</p>
-                          <p className="text-xs text-muted-foreground">{item.institution} ({item.duration})</p>
+                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center gap-3 text-sm">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold break-words">{item.degree}</p>
+                          <p className="text-xs text-muted-foreground break-words">{item.institution} ({item.duration})</p>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setEduForm(item); setEditingEduId(item.id); setShowEduForm(true); }}>
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -1130,10 +1156,10 @@ const Admin = () => {
 
                 {/* SUB-TAB: EXPERIENCE */}
                 <TabsContent value="exp" className="space-y-4 outline-none">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center gap-2">
                     <h3 className="font-semibold text-sm">Manage Experience</h3>
                     {!showExpForm && (
-                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowExpForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1 shrink-0" onClick={() => setShowExpForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Job
                       </Button>
                     )}
@@ -1142,7 +1168,7 @@ const Admin = () => {
                   {showExpForm && (
                     <form onSubmit={handleSaveExp} className="p-4 bg-secondary/20 border border-border rounded-lg space-y-3 relative">
                       <button type="button" onClick={() => { setShowExpForm(false); setEditingExpId(null); }} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Role / Job Title</label>
                           <Input value={expForm.role} onChange={(e) => setExpForm({ ...expForm, role: e.target.value })} required />
@@ -1152,7 +1178,7 @@ const Admin = () => {
                           <Input placeholder="Company · Full-Time" value={expForm.company} onChange={(e) => setExpForm({ ...expForm, company: e.target.value })} required />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Duration</label>
                           <Input placeholder="Dec 2025 - Present" value={expForm.duration} onChange={(e) => setExpForm({ ...expForm, duration: e.target.value })} required />
@@ -1184,6 +1210,7 @@ const Admin = () => {
                             type="button" 
                             size="sm"
                             variant="secondary"
+                            className="shrink-0"
                             onClick={() => {
                               if (!highlightInput.trim()) return;
                               setExpForm({ ...expForm, highlights: [...expForm.highlights, highlightInput.trim()] });
@@ -1195,9 +1222,9 @@ const Admin = () => {
                         </div>
                         <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                           {expForm.highlights.map((h, i) => (
-                            <li key={i} className="flex justify-between items-center gap-2 bg-background p-1.5 rounded border border-border">
-                              <span>{h}</span>
-                              <button type="button" className="text-destructive font-bold" onClick={() => setExpForm({ ...expForm, highlights: expForm.highlights.filter((_, idx) => idx !== i) })}>Remove</button>
+                            <li key={i} className="flex justify-between items-start gap-2 bg-background p-2 rounded border border-border">
+                              <span className="break-words min-w-0 flex-1">{h}</span>
+                              <button type="button" className="text-destructive font-bold shrink-0 text-xs" onClick={() => setExpForm({ ...expForm, highlights: expForm.highlights.filter((_, idx) => idx !== i) })}>Remove</button>
                             </li>
                           ))}
                         </ul>
@@ -1212,12 +1239,12 @@ const Admin = () => {
 
                   <div className="space-y-2">
                     {experience?.map((item: ExperienceItem) => (
-                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
-                        <div>
-                          <p className="font-semibold">{item.role}</p>
-                          <p className="text-xs text-muted-foreground">{item.company} ({item.duration})</p>
+                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center gap-3 text-sm">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold break-words">{item.role}</p>
+                          <p className="text-xs text-muted-foreground break-words">{item.company} ({item.duration})</p>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setExpForm(item); setEditingExpId(item.id); setShowExpForm(true); }}>
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -1232,10 +1259,10 @@ const Admin = () => {
 
                 {/* SUB-TAB: CERTIFICATIONS */}
                 <TabsContent value="certs" className="space-y-4 outline-none">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center gap-2">
                     <h3 className="font-semibold text-sm">Manage Certifications</h3>
                     {!showCertForm && (
-                      <Button size="sm" className="h-8 text-xs flex items-center gap-1" onClick={() => setShowCertForm(true)}>
+                      <Button size="sm" className="h-8 text-xs flex items-center gap-1 shrink-0" onClick={() => setShowCertForm(true)}>
                         <PlusCircle className="h-3.5 w-3.5" /> Add Certificate
                       </Button>
                     )}
@@ -1263,9 +1290,9 @@ const Admin = () => {
 
                   <div className="space-y-2">
                     {certifications?.map((item: CertificationItem) => (
-                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center text-sm">
-                        <p className="font-semibold">{item.name}</p>
-                        <div className="flex gap-1">
+                      <div key={item.id} className="p-3 bg-secondary/40 border border-border rounded-lg flex justify-between items-center gap-3 text-sm">
+                        <p className="font-semibold break-words min-w-0 flex-1">{item.name}</p>
+                        <div className="flex gap-1 shrink-0">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => { setCertForm(item); setEditingCertId(item.id); setShowCertForm(true); }}>
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -1281,7 +1308,9 @@ const Admin = () => {
             </TabsContent>
           </Tabs>
         </div>
-        <Footer />
+        <div className="w-full max-w-2xl mx-auto px-6">
+          <Footer />
+        </div>
       </div>
     </PageTransition>
   );

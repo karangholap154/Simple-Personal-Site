@@ -324,6 +324,23 @@ export function useExpenses() {
     };
   }, [expenses, monthlyBudget]);
 
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been logged out of the admin session.",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({
+        title: "Sign Out Error",
+        description: msg,
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     expenses,
     loading: authLoading || loading,
@@ -335,6 +352,7 @@ export function useExpenses() {
     deleteExpense,
     updateMonthlyBudget,
     exportToCSV,
+    signOut,
     refetch: fetchExpenses,
   };
 }

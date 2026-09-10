@@ -55,10 +55,10 @@ const ProjectsPreview = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="p-4 border border-border bg-secondary/20 rounded-lg space-y-2.5">
+            <div key={n} className="p-4 sm:p-5 border border-border bg-secondary/20 rounded-lg space-y-2.5 overflow-hidden">
               <Skeleton className="h-5 w-1/2" />
               <Skeleton className="h-4 w-5/6" />
-              <div className="flex gap-2 pt-1.5">
+              <div className="flex flex-wrap gap-1.5 pt-1.5">
                 <Skeleton className="h-5 w-14" />
                 <Skeleton className="h-5 w-14" />
                 <Skeleton className="h-5 w-14" />
@@ -90,22 +90,27 @@ const ProjectsPreview = () => {
             <motion.div key={project.title} variants={projectVariants}>
               <Link
                 to={`/projects?project=${slugify(project.title)}`}
-                className="block p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
+                className="block p-4 sm:p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group overflow-hidden border border-transparent hover:border-border/60"
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
-                      {project.title}
-                      <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex flex-col w-full min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
+                      <span className="truncate">{project.title}</span>
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-                    <div className="flex gap-2 mt-3">
-                      {project.tech.map((t) => (
-                        <span key={t} className="text-xs px-2 py-0.5 bg-background rounded text-muted-foreground">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
+                    <ArrowUpRight size={15} className="text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0 mt-0.5" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed break-words">
+                    {project.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-0.5">
+                    {project.tech.map((t) => (
+                      <span
+                        key={t}
+                        className="text-xs px-2 py-0.5 bg-background rounded text-muted-foreground border border-border/50 shrink-0"
+                      >
+                        {t}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </Link>

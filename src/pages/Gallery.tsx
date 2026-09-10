@@ -181,124 +181,126 @@ const Gallery = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="max-w-4xl mx-auto px-6">
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <div className="w-full max-w-2xl mx-auto px-6">
           <Navigation />
+        </div>
 
-          <main className="py-12">
-            <div className="mb-8">
-              <h1 className="text-2xl font-serif font-bold mb-4">Casual Photography</h1>
-              <p className="text-muted-foreground leading-relaxed">
-                When I’m not developing, I enjoy capturing casual photography
-                with my{" "}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="cursor-pointer hover:opacity-80 transition-opacity">
-                      <Badge
-                        variant="outline"
-                        className="hover:bg-primary/10 transition-colors text-sm px-2 py-1"
-                      >
-                        Nothing Phone 3a
-                      </Badge>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-4">
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-sm flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        Camera Specs (TrueLens Engine 3.0)
-                      </h3>
+        <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-6 sm:py-8">
+          <div className="mb-8">
+            <h1 className="text-2xl font-serif font-bold mb-4">Casual Photography</h1>
+            <p className="text-muted-foreground leading-relaxed">
+              When I’m not developing, I enjoy capturing casual photography
+              with my{" "}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                    <Badge
+                      variant="outline"
+                      className="hover:bg-primary/10 transition-colors text-sm px-2 py-1"
+                    >
+                      Nothing Phone 3a
+                    </Badge>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4">
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Camera Specs (TrueLens Engine 3.0)
+                    </h3>
 
-                      <div className="space-y-3 text-xs">
-                        {/* Wide Camera */}
-                        <div className="space-y-1 pb-2 border-b border-border/50">
-                          <h4 className="font-semibold uppercase text-muted-foreground">
-                            Wide-Angle
-                          </h4>
-                          <div className="flex justify-between">
-                            <span>50 MP</span>
-                            <span className="text-muted-foreground">
-                              Samsung GN9
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>24mm</span>
-                            <span className="text-muted-foreground">
-                              f/1.88
-                            </span>
-                          </div>
-                          <div className="text-muted-foreground">OIS + EIS</div>
+                    <div className="space-y-3 text-xs">
+                      {/* Wide Camera */}
+                      <div className="space-y-1 pb-2 border-b border-border/50">
+                        <h4 className="font-semibold uppercase text-muted-foreground">
+                          Wide-Angle
+                        </h4>
+                        <div className="flex justify-between">
+                          <span>50 MP</span>
+                          <span className="text-muted-foreground">
+                            Samsung GN9
+                          </span>
                         </div>
-
-                        {/* Telephoto Camera */}
-                        <div className="space-y-1 pb-2 border-b border-border/50">
-                          <h4 className="font-semibold uppercase text-muted-foreground">
-                            Telephoto
-                          </h4>
-                          <div className="flex justify-between">
-                            <span>50 MP</span>
-                            <span className="text-muted-foreground">
-                              Samsung J95
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>50mm</span>
-                            <span className="text-muted-foreground">f/2.0</span>
-                          </div>
-                          <div className="text-muted-foreground">
-                            2x Optical / 30x Digital
-                          </div>
+                        <div className="flex justify-between">
+                          <span>24mm</span>
+                          <span className="text-muted-foreground">
+                            f/1.88
+                          </span>
                         </div>
+                        <div className="text-muted-foreground">OIS + EIS</div>
+                      </div>
 
-                        {/* Ultra Wide Camera */}
-                        <div className="space-y-1">
-                          <h4 className="font-semibold uppercase text-muted-foreground">
-                            Ultra-Wide
-                          </h4>
-                          <div className="flex justify-between">
-                            <span>8 MP</span>
-                            <span className="text-muted-foreground">
-                              Sony IMX 366
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>15mm</span>
-                            <span className="text-muted-foreground">f/2.2</span>
-                          </div>
-                          <div className="text-muted-foreground">
-                            120° FOV / EIS
-                          </div>
+                      {/* Telephoto Camera */}
+                      <div className="space-y-1 pb-2 border-b border-border/50">
+                        <h4 className="font-semibold uppercase text-muted-foreground">
+                          Telephoto
+                        </h4>
+                        <div className="flex justify-between">
+                          <span>50 MP</span>
+                          <span className="text-muted-foreground">
+                            Samsung J95
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>50mm</span>
+                          <span className="text-muted-foreground">f/2.0</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          2x Optical / 30x Digital
+                        </div>
+                      </div>
+
+                      {/* Ultra Wide Camera */}
+                      <div className="space-y-1">
+                        <h4 className="font-semibold uppercase text-muted-foreground">
+                          Ultra-Wide
+                        </h4>
+                        <div className="flex justify-between">
+                          <span>8 MP</span>
+                          <span className="text-muted-foreground">
+                            Sony IMX 366
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>15mm</span>
+                          <span className="text-muted-foreground">f/2.2</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          120° FOV / EIS
                         </div>
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
-                , there's something uniquely rewarding about slowing down and
-                preserving everyday moments.
-              </p>
-            </div>
-            {images.length > 0 ? (
-              <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-                {images.map((image, index) => (
-                  <div key={index} className="break-inside-avoid mb-4">
-                    <LazyImage
-                      src={image.src}
-                      alt={image.title}
-                      containerClassName="rounded-lg bg-muted cursor-pointer min-h-[120px]"
-                      className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
-                      onClick={() => openLightbox(index)}
-                    />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Camera className="h-12 w-12 mb-4 opacity-50" />
-                <p>No photos yet. Add images to the gallery folder.</p>
-              </div>
-            )}
-          </main>
+                </PopoverContent>
+              </Popover>
+              , there's something uniquely rewarding about slowing down and
+              preserving everyday moments.
+            </p>
+          </div>
+          {images.length > 0 ? (
+            <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
+              {images.map((image, index) => (
+                <div key={index} className="break-inside-avoid mb-4">
+                  <LazyImage
+                    src={image.src}
+                    alt={image.title}
+                    containerClassName="rounded-lg bg-muted cursor-pointer min-h-[120px]"
+                    className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
+                    onClick={() => openLightbox(index)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Camera className="h-12 w-12 mb-4 opacity-50" />
+              <p>No photos yet. Add images to the gallery folder.</p>
+            </div>
+          )}
+        </main>
 
+        <div className="w-full max-w-2xl mx-auto px-6">
           <Footer />
         </div>
       </div>

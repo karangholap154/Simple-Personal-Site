@@ -29,6 +29,7 @@ import {
   Zap,
   PieChart,
   Terminal,
+  LogOut,
 } from "lucide-react";
 
 const Expenses = () => {
@@ -50,6 +51,7 @@ const Expenses = () => {
     deleteExpense,
     updateMonthlyBudget,
     exportToCSV,
+    signOut,
   } = useExpenses();
 
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
@@ -59,10 +61,11 @@ const Expenses = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 flex-1 flex flex-col">
+        <div className="w-full max-w-2xl mx-auto px-6">
           <Navigation />
+        </div>
 
-          <main className="flex-1 py-8 space-y-8">
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-8">
             {/* Header section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-6">
               <div>
@@ -94,7 +97,7 @@ const Expenses = () => {
 
               {/* Actions (when logged in) */}
               {isCloudSynced && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -104,6 +107,15 @@ const Expenses = () => {
                   >
                     <Download className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                     Export CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={signOut}
+                    className="text-xs h-8 text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5 mr-1.5" />
+                    Sign Out
                   </Button>
                 </div>
               )}
@@ -280,6 +292,7 @@ const Expenses = () => {
             )}
           </main>
 
+        <div className="w-full max-w-2xl mx-auto px-6">
           <Footer />
         </div>
 

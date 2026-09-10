@@ -74,16 +74,16 @@ const ProjectsSection = ({
           <div
             key={project.title}
             onClick={() => onSelectProject(project)}
-            className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer group"
+            className="p-5 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer group overflow-hidden"
           >
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                {project.title}
-                <span className="text-xs font-normal text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
+                <span className="truncate">{project.title}</span>
+                <span className="text-xs font-normal text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   (View case study)
                 </span>
               </h3>
-              <div className="flex gap-3">
+              <div className="flex gap-3 shrink-0">
                 {project.link ? (
                   <a
                     href={project.link}
@@ -103,13 +103,13 @@ const ProjectsSection = ({
                 )}
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed break-words">
               {project.description}
             </p>
             <p className="text-xs text-foreground/80 mb-3">
               Role: <span className="text-foreground font-medium">{project.role}</span>
             </p>
-            <ul className="text-sm text-muted-foreground space-y-1 mb-4 list-disc list-inside">
+            <ul className="text-sm text-muted-foreground space-y-1 mb-4 list-disc list-inside break-words">
               {project.outcomes.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -289,6 +289,47 @@ const Projects = () => {
                 >
                   View resume
                 </Link>
+              </div>
+            </div>
+
+            {/* Live Interactive Application Spotlight */}
+            <div className="rounded-xl border border-primary/20 bg-secondary/30 p-5 mb-8">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-primary font-semibold">
+                      Featured Live Application
+                    </span>
+                    <span className="text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.2 rounded-full font-medium">
+                      Live
+                    </span>
+                  </div>
+                  <h3 className="text-base font-semibold mt-1.5 flex items-center gap-2">
+                    <span>Daily Expense Tracker</span>
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                    A responsive personal expense & budget management web app with category cash-flow analytics, interactive charts, and secure cloud synchronization.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {["React", "TypeScript", "Tailwind CSS", "Recharts", "Supabase"].map((t) => (
+                      <span key={t} className="text-xs px-2 py-0.5 bg-background rounded text-muted-foreground border border-border/50">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between">
+                <Link
+                  to="/expenses"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  <span>Launch Live App</span>
+                  <ArrowUpRight size={14} />
+                </Link>
+                <span className="text-xs text-muted-foreground font-mono">
+                  /expenses
+                </span>
               </div>
             </div>
 

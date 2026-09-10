@@ -238,12 +238,20 @@ const Index = () => {
                   )}
                 </button>
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground/60 text-sm pt-2">
-                <span>Press</span>
-                <kbd className="px-2 py-0.5 text-xs font-mono bg-muted/50 border border-border rounded">
-                  ⌘ + K
-                </kbd>
-                <span>to navigate quickly</span>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+                  className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-xs sm:text-sm py-1.5 px-3 rounded-lg border border-border/70 bg-secondary/40 hover:bg-secondary transition-all cursor-pointer group"
+                  aria-label="Open Command Palette"
+                >
+                  <span className="hidden sm:inline">Press</span>
+                  <span className="sm:hidden">Tap or press</span>
+                  <kbd className="px-1.5 py-0.5 text-xs font-mono bg-background border border-border rounded text-foreground group-hover:border-primary/50 transition-colors">
+                    ⌘K
+                  </kbd>
+                  <span>to navigate quickly</span>
+                </button>
               </div>
             </section>
           </ScrollReveal>
