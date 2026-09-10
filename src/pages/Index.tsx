@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import CompanyBadge from "@/components/CompanyBadge";
@@ -8,11 +9,38 @@ import ProjectsPreview from "@/components/ProjectsPreview";
 import PageTransition from "@/components/PageTransition";
 import ScrollReveal from "@/components/ScrollReveal";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useToast } from "@/hooks/use-toast";
+import { Copy, Check } from "lucide-react";
 import profileImage from "@/assets/profile.png";
 
 import NowSection from "@/components/NowSection";
 
 const Index = () => {
+  const { toast } = useToast();
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const handleCopyEmail = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      await navigator.clipboard.writeText("karangholap@zohomail.in");
+      setCopiedEmail(true);
+      toast({
+        title: "Email copied to clipboard!",
+        description: "karangholap@zohomail.in",
+      });
+      setTimeout(() => setCopiedEmail(false), 2000);
+    } catch {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy karangholap@zohomail.in manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
   usePageMeta({
     title: "Software Developer Portfolio",
     description:
@@ -188,13 +216,28 @@ const Index = () => {
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
-              <a
-                href="mailto:karangholap@zohomail.in"
-                className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors"
-              >
-                <span className="text-lg">📧</span>
-                <span>karangholap@zohomail.in</span>
-              </a>
+              <div className="flex items-center justify-between sm:justify-start gap-3">
+                <a
+                  href="mailto:karangholap@zohomail.in"
+                  className="flex items-center gap-2 text-foreground hover:text-muted-foreground transition-colors text-sm sm:text-base"
+                >
+                  <span className="text-lg">📧</span>
+                  <span>karangholap@zohomail.in</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className="p-1.5 text-muted-foreground hover:text-foreground bg-secondary/60 hover:bg-secondary rounded border border-border transition-colors flex items-center justify-center"
+                  title={copiedEmail ? "Copied to clipboard!" : "Copy email to clipboard"}
+                  aria-label="Copy email to clipboard"
+                >
+                  {copiedEmail ? (
+                    <Check size={14} className="text-green-500" />
+                  ) : (
+                    <Copy size={14} />
+                  )}
+                </button>
+              </div>
               <div className="flex items-center gap-2 text-muted-foreground/60 text-sm pt-2">
                 <span>Press</span>
                 <kbd className="px-2 py-0.5 text-xs font-mono bg-muted/50 border border-border rounded">

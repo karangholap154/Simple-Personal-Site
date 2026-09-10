@@ -1,7 +1,7 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
-import { Mail, Github, Linkedin, Instagram, ExternalLink, Send, Loader2 } from "lucide-react";
+import { Mail, Github, Linkedin, Instagram, ExternalLink, Send, Loader2, Copy, Check, Clock } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +25,6 @@ const socialLinks = [
   { name: "GitHub", url: "https://github.com/karangholap154", icon: Github },
   { name: "LinkedIn", url: "https://linkedin.com/in/karangholap", icon: Linkedin },
   { name: "Instagram", url: "https://www.instagram.com/thekarangholap", icon: Instagram },
-  { name: "Email", url: "mailto:karangholap@zohomail.in", icon: Mail },
 ];
 
 const otherLinks = [
@@ -56,6 +55,29 @@ const Contact = () => {
 
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const handleCopyEmail = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      await navigator.clipboard.writeText("karangholap@zohomail.in");
+      setCopiedEmail(true);
+      toast({
+        title: "Email copied to clipboard!",
+        description: "karangholap@zohomail.in",
+      });
+      setTimeout(() => setCopiedEmail(false), 2000);
+    } catch {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy karangholap@zohomail.in manually.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,7 +95,7 @@ const Contact = () => {
     if (values.bot_check) {
       toast({
         title: "Message sent!",
-        description: "Thank you for reaching out. I'll get back to you soon.",
+        description: "Thank you for reaching out! I've received your note and usually respond within 24 hours.",
       });
       form.reset();
       return;
@@ -94,7 +116,7 @@ const Contact = () => {
 
       toast({
         title: "Message sent!",
-        description: "Thank you for reaching out. I'll get back to you soon.",
+        description: "Thank you for reaching out! I've received your note and usually respond within 24 hours.",
       });
 
       form.reset();
@@ -208,6 +230,10 @@ const Contact = () => {
                       </>
                     )}
                   </Button>
+                  <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5 pt-1">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
+                    <span>Usually responds within 24 hours</span>
+                  </p>
                 </form>
               </Form>
             </div>
@@ -216,11 +242,49 @@ const Contact = () => {
             <div className="mb-10">
               <h2 className="text-lg font-semibold mb-4">Connect Directly</h2>
               <div className="space-y-3">
+                {/* Email with 1-click Copy and Mailto */}
+                <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Mail size={20} className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-xs text-muted-foreground block">Email</span>
+                      <a
+                        href="mailto:karangholap@zohomail.in"
+                        className="text-foreground hover:underline font-medium text-sm truncate block"
+                        title="Send email via mail client"
+                      >
+                        karangholap@zohomail.in
+                      </a>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyEmail}
+                      className="h-8 w-8 border-border bg-background/50 hover:bg-background transition-colors"
+                      title={copiedEmail ? "Copied to clipboard!" : "Copy email to clipboard"}
+                      aria-label="Copy email to clipboard"
+                    >
+                      {copiedEmail ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </Button>
+                    <a
+                      href="mailto:karangholap@zohomail.in"
+                      className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Open in mail client"
+                      aria-label="Open in mail client"
+                    >
+                      <ExternalLink size={16} />
+                    </a>
+                  </div>
+                </div>
+
                 {socialLinks.map((link) => (
                   <a
                     key={link.name}
                     href={link.url}
-                    target={link.url.startsWith("mailto") ? undefined : "_blank"}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 p-4 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors group"
                   >

@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => ({
           "vendor-motion": ["framer-motion"],
           "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-popover", "@radix-ui/react-tooltip", "lucide-react"],
           "vendor-query": ["@tanstack/react-query", "@supabase/supabase-js"],
+          "vendor-terminal": ["@xterm/xterm", "@xterm/addon-fit"],
         },
       },
     },

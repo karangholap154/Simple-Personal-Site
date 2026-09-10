@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AnimatePresence } from "framer-motion";
 import CommandPalette from "./components/CommandPalette";
-import { FixedTerminalButton } from "./components/PortfolioCLI";
+import { FixedTerminalButton } from "./components/terminal/FixedTerminalButton";
 
 const Index = lazy(() => import("./pages/Index"));
 const Projects = lazy(() => import("./pages/Projects"));
