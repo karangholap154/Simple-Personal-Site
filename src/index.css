@@ -184,4 +184,34 @@ html::-webkit-scrollbar {
     filter: drop-shadow(0 0 8px hsl(var(--coffee-glow) / 0.6))
       drop-shadow(0 0 16px hsl(var(--coffee-glow) / 0.4));
   }
+
+  /* Infinite Marquee moving Left-to-Right */
+  @keyframes marquee-ltr {
+    0% {
+      transform: translateX(-50%);
+    }
+    100% {
+      transform: translateX(0%);
+    }
+  }
+
+  .animate-marquee-ltr {
+    display: flex;
+    width: max-content;
+    animation: marquee-ltr var(--marquee-duration, 38s) linear infinite;
+    will-change: transform;
+  }
+
+  .animate-marquee-ltr:hover {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee-ltr {
+      animation: none;
+      overflow-x: auto;
+      width: 100%;
+    }
+  }
 }
+
