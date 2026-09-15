@@ -48,44 +48,44 @@ interface GitHubPublicEvent {
 // Fallback baseline commits if GitHub rate limits (403 Forbidden) on fresh browser sessions
 const INITIAL_BASELINE_COMMITS: CommitDetail[] = [
   {
-    sha: "a3f89b1",
+    sha: "f5e37d7",
+    repoName: "gymos-api",
+    repoUrl: "https://github.com/karangholap154/gymos-api",
+    message: "Route root URL / to api_root view and allow testserver host in DEBUG",
+    relativeTime: "2 days ago",
+    dateStr: "2026-09-13T17:02:57Z",
+  },
+  {
+    sha: "fc46686",
+    repoName: "gymos-web",
+    repoUrl: "https://github.com/karangholap154/gymos-web",
+    message: "Configure gymos-web with API helper, env template, and GymOS dashboard layout",
+    relativeTime: "2 days ago",
+    dateStr: "2026-09-13T16:53:49Z",
+  },
+  {
+    sha: "c1f8a1d",
+    repoName: "gymos-api",
+    repoUrl: "https://github.com/karangholap154/gymos-api",
+    message: "Initial commit for gymos-api (DRF, CORS, health check, settings)",
+    relativeTime: "2 days ago",
+    dateStr: "2026-09-13T16:52:20Z",
+  },
+  {
+    sha: "b3c0fbe",
+    repoName: "gymos-web",
+    repoUrl: "https://github.com/karangholap154/gymos-web",
+    message: "Initial commit from Create Next App",
+    relativeTime: "2 days ago",
+    dateStr: "2026-09-13T16:50:44Z",
+  },
+  {
+    sha: "b38071f",
     repoName: "pvt-web-razor",
     repoUrl: "https://github.com/karangholap154/pvt-web-razor",
-    message: "Add custom error, loading, and not-found pages with alerts",
-    relativeTime: "about 1 hour ago",
-    dateStr: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    sha: "7d2c109",
-    repoName: "Simple-Personal-Site",
-    repoUrl: "https://github.com/karangholap154/Simple-Personal-Site",
-    message: "Implement dynamic Now section with AI Activity Summary",
-    relativeTime: "about 2 hours ago",
-    dateStr: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    sha: "b4e112a",
-    repoName: "Simple-Personal-Site",
-    repoUrl: "https://github.com/karangholap154/Simple-Personal-Site",
-    message: "Create site_now_status database table and RLS policies",
-    relativeTime: "about 3 hours ago",
-    dateStr: new Date(Date.now() - 10800000).toISOString(),
-  },
-  {
-    sha: "f9901d3",
-    repoName: "Simple-Personal-Site",
-    repoUrl: "https://github.com/karangholap154/Simple-Personal-Site",
-    message: "Add Now Status tab in Admin dashboard for manual override",
-    relativeTime: "about 4 hours ago",
-    dateStr: new Date(Date.now() - 14400000).toISOString(),
-  },
-  {
-    sha: "c8a301e",
-    repoName: "Simple-Personal-Site",
-    repoUrl: "https://github.com/karangholap154/Simple-Personal-Site",
-    message: "Refine responsive layout and activity feed triggers",
-    relativeTime: "about 5 hours ago",
-    dateStr: new Date(Date.now() - 18000000).toISOString(),
+    message: "Enhance NoteDetailsClient with new badges, icons, and improved styles",
+    relativeTime: "3 days ago",
+    dateStr: "2026-09-12T17:09:57Z",
   },
 ];
 
@@ -202,11 +202,11 @@ export const NowSection = () => {
     },
   });
 
-  // 2. Fetch Last 5 Public Commits Across Account (Single API Call + Cache + Fallback Protection)
+  // 2. Fetch Last 5 Public Commits Across Account (Dynamic Repository Discovery + Cache + Fallback Protection)
   const { data: activityData, isLoading: loadingGithub } = useQuery({
-    queryKey: ["github-last-5-commits-activity"],
+    queryKey: ["github-last-5-commits-activity-v4"],
     queryFn: async () => {
-      const cacheKey = "github_last_5_commits_cache";
+      const cacheKey = "github_last_5_commits_cache_v4";
       let cachedCommits: CommitDetail[] | null = null;
 
       try {
@@ -216,15 +216,21 @@ export const NowSection = () => {
           if (cachedObj.commits && cachedObj.commits.length > 0) {
             cachedCommits = cachedObj.commits;
             const ageMinutes = (Date.now() - (cachedObj.timestamp || 0)) / (1000 * 60);
-            // If cache is fresh (< 30 mins), use it immediately without network call
-            if (ageMinutes < 30) {
-              const repoSummaries = await fetchGeminiSummaries(cachedCommits!);
-              const distinctRepos = Array.from(new Set(cachedCommits!.map((c) => c.repoName)));
+            // If cache is fresh (< 15 mins), use it immediately with live relative times
+            if (ageMinutes < 15) {
+              const liveCommits = cachedCommits!.map((c) => ({
+                ...c,
+                relativeTime: c.dateStr
+                  ? formatDistanceToNow(new Date(c.dateStr), { addSuffix: true })
+                  : c.relativeTime,
+              }));
+              const repoSummaries = await fetchGeminiSummaries(liveCommits);
+              const distinctRepos = Array.from(new Set(liveCommits.map((c) => c.repoName)));
               return {
-                commits: cachedCommits!,
+                commits: liveCommits,
                 distinctRepos,
                 repoSummaries,
-                latestTime: cachedCommits![0]?.relativeTime || "recently",
+                latestTime: liveCommits[0]?.relativeTime || "recently",
               };
             }
           }
@@ -236,60 +242,43 @@ export const NowSection = () => {
       const allCommits: CommitDetail[] = [];
       let isRateLimited = false;
 
-      // Step A: Fetch public events from GitHub API
+      // Step A: Dynamically fetch user's most recently active repositories
+      let activeRepos: string[] = ["gymos-web", "gymos-api", "pvt-web-razor", "Simple-Personal-Site"];
       try {
-        const eventsRes = await fetch(
-          "https://api.github.com/users/karangholap154/events/public?per_page=30"
+        const reposRes = await fetch(
+          "https://api.github.com/users/karangholap154/repos?sort=pushed&per_page=6"
         );
-        if (eventsRes.status === 403) {
+        if (reposRes.status === 403) {
           isRateLimited = true;
-        } else if (eventsRes.ok) {
-          const events: GitHubPublicEvent[] = await eventsRes.json();
-          const pushEvents = events.filter(
-            (e) => e.type === "PushEvent" && (e.payload?.commits?.length ?? 0) > 0
-          );
-
-          for (const ev of pushEvents) {
-            const repoName = ev.repo?.name?.replace(/^karangholap154\//i, "") || "";
-            if (ev.created_at) {
-              const dateStr = ev.created_at;
-              for (const c of ev.payload?.commits ?? []) {
-                const rawMsg = c.message || "";
-                allCommits.push({
-                  sha: c.sha?.slice(0, 7) || Math.random().toString(),
-                  repoName,
-                  repoUrl: `https://github.com/karangholap154/${repoName}`,
-                  message: cleanCommitMessage(rawMsg),
-                  dateStr,
-                  relativeTime: formatDistanceToNow(new Date(dateStr), { addSuffix: true }),
-                });
-              }
-            }
+        } else if (reposRes.ok) {
+          const reposData = await reposRes.json();
+          if (Array.isArray(reposData) && reposData.length > 0) {
+            activeRepos = reposData.map((r: { name: string }) => r.name);
           }
         }
       } catch (err) {
-        // Events API network failure
+        // Use default fallback activeRepos
       }
 
-      // Step B: Direct repo fallback if events API failed or empty (Skip if rate limited 403)
-      if (allCommits.length < 5 && !isRateLimited) {
-        const fallbackRepos = ["pvt-web-razor", "Simple-Personal-Site"];
-        for (const repoName of fallbackRepos) {
+      // Step B: Fetch recent commits for top active repositories
+      if (!isRateLimited) {
+        const targetRepos = activeRepos.slice(0, 4);
+        const commitPromises = targetRepos.map(async (repoName) => {
           try {
             const repoRes = await fetch(
-              `https://api.github.com/repos/karangholap154/${repoName}/commits?per_page=5`
+              `https://api.github.com/repos/karangholap154/${repoName}/commits?per_page=3`
             );
             if (repoRes.status === 403) {
               isRateLimited = true;
-              break;
+              return [];
             }
             if (repoRes.ok) {
               const commitsList = await repoRes.json();
-              for (const c of commitsList) {
+              return (Array.isArray(commitsList) ? commitsList : []).map((c: any) => {
                 const rawMsg = c.commit?.message || "";
                 const dateStr = c.commit?.committer?.date || c.commit?.author?.date || "";
-                allCommits.push({
-                  sha: c.sha?.slice(0, 7) || Math.random().toString(),
+                return {
+                  sha: c.sha?.slice(0, 7) || Math.random().toString().slice(2, 9),
                   repoName,
                   repoUrl: `https://github.com/karangholap154/${repoName}`,
                   message: cleanCommitMessage(rawMsg),
@@ -297,20 +286,27 @@ export const NowSection = () => {
                   relativeTime: dateStr
                     ? formatDistanceToNow(new Date(dateStr), { addSuffix: true })
                     : "recently",
-                });
-              }
+                } as CommitDetail;
+              });
             }
           } catch (err) {
             // continue
           }
-        }
+          return [];
+        });
+
+        const settled = await Promise.allSettled(commitPromises);
+        settled.forEach((result) => {
+          if (result.status === "fulfilled" && Array.isArray(result.value)) {
+            allCommits.push(...result.value);
+          }
+        });
       }
 
-      // Step C: Rate Limit Shield (If 403 error or network failure returned empty commits)
+      // Step C: Fallback shield (Use cached or baseline if rate limited or empty)
       let finalCommits = allCommits;
 
       if (finalCommits.length === 0) {
-        // Use previously cached commits if available, or INITIAL_BASELINE_COMMITS
         finalCommits = cachedCommits || INITIAL_BASELINE_COMMITS;
       } else {
         // Sort collected candidate commits by newest date first
@@ -343,7 +339,7 @@ export const NowSection = () => {
         latestTime: finalCommits[0]?.relativeTime || "recently",
       };
     },
-    staleTime: 1000 * 60 * 30, // Cache in memory for 30 mins
+    staleTime: 1000 * 60 * 15, // Cache in memory for 15 mins
     gcTime: 1000 * 60 * 60, // Garbage collection time: 1 hour
     retry: 1,
   });
