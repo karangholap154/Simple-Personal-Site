@@ -84,15 +84,15 @@ export const BudgetSettingsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-5 pb-3 border-b border-border/60">
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md max-h-[88dvh] rounded-2xl sm:rounded-xl flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Wallet className="w-5 h-5 text-primary" />
             Budget Settings & Caps
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           <Tabs defaultValue="overall" className="space-y-4">
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="overall" className="text-xs flex items-center gap-1.5">
@@ -119,12 +119,13 @@ export const BudgetSettingsModal = ({
                   </span>
                   <Input
                     type="number"
+                    inputMode="decimal"
                     min="500"
                     step="500"
                     required
                     value={overallBudget}
                     onChange={(e) => setOverallBudget(e.target.value)}
-                    className="pl-7 font-bold text-lg"
+                    className="pl-7 font-bold text-lg h-11"
                   />
                 </div>
               </div>
@@ -132,7 +133,7 @@ export const BudgetSettingsModal = ({
               {totalCategoryAllocated > 0 && (
                 <div className="p-3 rounded-lg border border-border bg-secondary/30 text-xs text-muted-foreground flex items-center justify-between">
                   <span>Category caps allocated:</span>
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold text-foreground font-mono">
                     ₹{totalCategoryAllocated.toLocaleString()} / ₹{parseFloat(overallBudget || "0").toLocaleString()}
                   </span>
                 </div>
@@ -146,19 +147,19 @@ export const BudgetSettingsModal = ({
                   Set optional monthly spending ceilings for high-leak categories.
                 </p>
                 {totalCategoryAllocated > 0 && (
-                  <span className="font-semibold text-foreground whitespace-nowrap pl-2">
+                  <span className="font-semibold text-foreground whitespace-nowrap pl-2 font-mono">
                     ₹{totalCategoryAllocated.toLocaleString()} cap
                   </span>
                 )}
               </div>
 
-              <div className="space-y-2.5 max-h-[38vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
                 {CATEGORIES.map((cat) => (
                   <div
                     key={cat}
-                    className="flex items-center justify-between gap-3 p-2 rounded-lg border border-border/60 bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                    className="flex items-center justify-between gap-2 p-2 rounded-lg border border-border/60 bg-secondary/20 hover:bg-secondary/40 transition-colors"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <span
                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: CATEGORY_COLORS[cat] }}
@@ -166,18 +167,19 @@ export const BudgetSettingsModal = ({
                       <span className="text-xs font-medium text-foreground truncate">{cat}</span>
                     </div>
 
-                    <div className="relative w-28 flex-shrink-0">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
+                    <div className="relative w-24 sm:w-28 flex-shrink-0">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground font-semibold">
                         ₹
                       </span>
                       <Input
                         type="number"
+                        inputMode="decimal"
                         min="0"
                         step="100"
                         placeholder="No cap"
                         value={categoryInputs[cat] || ""}
                         onChange={(e) => handleCategoryChange(cat, e.target.value)}
-                        className="pl-6 h-8 text-xs font-semibold"
+                        className="pl-6 h-8 text-xs font-semibold font-mono"
                       />
                     </div>
                   </div>
@@ -186,11 +188,13 @@ export const BudgetSettingsModal = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border/40">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <DialogFooter className="pt-3 border-t border-border/40 flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto h-9">
               Cancel
             </Button>
-            <Button type="submit">Save Budgets & Caps</Button>
+            <Button type="submit" className="w-full sm:w-auto h-9">
+              Save Budgets & Caps
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

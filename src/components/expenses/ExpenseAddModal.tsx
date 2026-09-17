@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { ExpenseCategory, PaymentMethod, ExpenseType, CATEGORY_COLORS, EXPENSE_TYPE_LABELS } from "@/types/expenses";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
+  isOpen: boolean;
+  onClose: () => void;
   onAddExpense: (item: {
     amount: number;
     category: ExpenseCategory;
@@ -37,7 +46,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   "NetBanking",
 ];
 
-export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
+export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense }: Props) => {
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>("Food & Dining");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
@@ -65,44 +74,53 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
       setAmount("");
       setNotes("");
       setDate(format(new Date(), "yyyy-MM-dd"));
+      onClose();
     }
     setSubmitting(false);
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 backdrop-blur-sm p-5 shadow-sm">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[88dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-xl">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Wallet className="w-5 h-5 text-primary" />
+            Add Expense
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 py-1">
           {/* Amount */}
-          <div className="md:col-span-3 space-y-1">
-            <label className="text-xs text-muted-foreground font-medium">Amount (₹)</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Amount (₹)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
                 ₹
               </span>
               <Input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="1"
                 required
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="pl-7 font-semibold"
+                className="pl-7 font-bold text-base h-10"
               />
             </div>
           </div>
 
           {/* Category */}
-          <div className="md:col-span-3 space-y-1">
-            <label className="text-xs text-muted-foreground font-medium">Category</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Category</label>
             <Select value={category} onValueChange={(val) => setCategory(val as ExpenseCategory)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
+                  <SelectItem key={cat} value={cat} className="text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <span
                         className="w-2 h-2 rounded-full"
@@ -117,15 +135,15 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
           </div>
 
           {/* Payment Method */}
-          <div className="md:col-span-2 space-y-1">
-            <label className="text-xs text-muted-foreground font-medium">Payment</label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Payment Method</label>
             <Select value={paymentMethod} onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((method) => (
-                  <SelectItem key={method} value={method}>
+                  <SelectItem key={method} value={method} className="text-xs sm:text-sm">
                     {method}
                   </SelectItem>
                 ))}
@@ -133,23 +151,10 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
             </Select>
           </div>
 
-          {/* Notes */}
-          <div className="md:col-span-4 space-y-1">
-            <label className="text-xs text-muted-foreground font-medium">Notes / Description</label>
-            <Input
-              type="text"
-              placeholder="e.g. Swiggy dinner, domain renewal"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-border/40">
-          {/* Classification & Date */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Expense Type Buttons */}
-            <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
+          {/* Classification (Need / Want / Investment) */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Classification</label>
+            <div className="grid grid-cols-3 gap-1.5 bg-secondary/30 p-1 rounded-lg border border-border/50">
               {(["need", "want", "investment"] as ExpenseType[]).map((t) => {
                 const isSelected = expenseType === t;
                 const meta = EXPENSE_TYPE_LABELS[t];
@@ -159,51 +164,54 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
                     type="button"
                     onClick={() => setExpenseType(t)}
                     title={meta.description}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                    className={`py-1.5 px-1 rounded-md text-xs font-medium border text-center transition-all ${
                       isSelected
                         ? meta.activeClass
-                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/70"
+                        : "border-border/40 bg-secondary/40 text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                     }`}
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        t === "need"
-                          ? "bg-emerald-400"
-                          : t === "want"
-                          ? "bg-amber-400"
-                          : "bg-blue-400"
-                      }`}
-                    />
-                    <span>{meta.label}</span>
+                    {meta.label}
                   </button>
                 );
               })}
             </div>
-
-            {/* Custom Date */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="text-xs bg-secondary/50 border border-border rounded-md px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
           </div>
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={submitting || !amount}
-            className="w-full sm:w-auto px-6 font-medium sm:ml-auto"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            {submitting ? "Adding..." : "Add Expense"}
-          </Button>
-        </div>
-      </form>
-    </div>
+          {/* Notes */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Notes / Description</label>
+            <Input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Swiggy dinner, domain renewal"
+              className="h-9 text-xs sm:text-sm"
+            />
+          </div>
+
+          {/* Date */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <DialogFooter className="pt-3 border-t border-border/40 flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="w-full sm:w-auto h-9">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || !amount} className="w-full sm:w-auto h-9">
+              {submitting ? "Adding..." : "Add Expense"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
-export default ExpenseQuickAdd;
+
+export default ExpenseAddModal;

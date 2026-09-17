@@ -88,14 +88,14 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Expense</DialogTitle>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[88dvh] overflow-y-auto p-4 sm:p-6 rounded-2xl sm:rounded-xl">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="text-base sm:text-lg">Edit Expense</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="space-y-4 py-2">
+        <form onSubmit={handleSave} className="space-y-3.5 py-1">
           {/* Amount */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Amount (₹)</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">
@@ -103,29 +103,30 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
               </span>
               <Input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="1"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="pl-7 font-bold"
+                className="pl-7 font-bold text-base h-10"
               />
             </div>
           </div>
 
           {/* Category */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Category</label>
             <Select value={category} onValueChange={(val) => setCategory(val as ExpenseCategory)}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
+                  <SelectItem key={cat} value={cat} className="text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: CATEGORY_COLORS[cat] }}
                       />
                       <span>{cat}</span>
@@ -137,15 +138,15 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
           </div>
 
           {/* Payment Method */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Payment Method</label>
             <Select value={paymentMethod} onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((method) => (
-                  <SelectItem key={method} value={method}>
+                  <SelectItem key={method} value={method} className="text-xs sm:text-sm">
                     {method}
                   </SelectItem>
                 ))}
@@ -154,9 +155,9 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
           </div>
 
           {/* Classification (Need / Want / Investment) */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Classification</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 bg-secondary/30 p-1 rounded-lg border border-border/50">
               {(["need", "want", "investment"] as ExpenseType[]).map((t) => {
                 const isSelected = expenseType === t;
                 const meta = EXPENSE_TYPE_LABELS[t];
@@ -166,10 +167,10 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
                     type="button"
                     onClick={() => setExpenseType(t)}
                     title={meta.description}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                    className={`py-1.5 px-1 rounded-md text-xs font-medium border text-center transition-all ${
                       isSelected
                         ? meta.activeClass
-                        : "border-border/60 bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                        : "border-border/40 bg-secondary/40 text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                     }`}
                   >
                     {meta.label}
@@ -180,32 +181,33 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
           </div>
 
           {/* Notes */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Notes</label>
             <Input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Description"
+              className="h-9 text-xs sm:text-sm"
             />
           </div>
 
           {/* Date */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Date</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full text-sm bg-secondary/50 border border-border rounded-md px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <DialogFooter className="pt-3 border-t border-border/40 flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto h-9">
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="w-full sm:w-auto h-9">
               {saving ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

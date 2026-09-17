@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExpenseStats } from "@/types/expenses";
-import { AlertTriangle, Zap, X, ShieldAlert, Sliders } from "lucide-react";
+import { AlertTriangle, Zap, X, ShieldAlert, Sliders, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
 export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
   const [spikeDismissed, setSpikeDismissed] = useState(false);
   const [dismissedCategories, setDismissedCategories] = useState<Record<string, boolean>>({});
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const dismissCategory = (cat: string) => {
     setDismissedCategories((prev) => ({ ...prev, [cat]: true }));
@@ -24,134 +25,140 @@ export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
   );
 
   const showSpike = stats.hasSpikeToday && !spikeDismissed;
-  const showCategoryAlerts = activeOverCategories.length > 0 || activeNearCategories.length > 0;
+  const totalAlerts = (showSpike ? 1 : 0) + activeOverCategories.length + activeNearCategories.length;
 
-  if (!showSpike && !showCategoryAlerts) {
+  if (totalAlerts === 0) {
     return null;
   }
 
+  const hasCritical = showSpike || activeOverCategories.length > 0;
+  const themeClass = hasCritical
+    ? "border-destructive/40 bg-destructive/10 text-destructive"
+    : "border-amber-500/40 bg-amber-500/10 text-amber-500";
+
   return (
-    <div className="space-y-2.5">
-      {/* 1. Daily Spike Warning */}
-      {showSpike && (
-        <div className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/10 text-xs text-foreground flex items-start justify-between gap-3 shadow-sm animate-in fade-in-50">
-          <div className="flex items-start gap-2.5">
-            <div className="p-1 rounded-md bg-destructive/20 text-destructive mt-0.5 flex-shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="font-semibold text-destructive flex items-center gap-1.5">
-                <span>Daily Spending Spike Detected</span>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                You spent <span className="font-semibold text-foreground">₹{stats.todayTotal.toLocaleString()}</span> today, which is{" "}
-                <span className="font-semibold text-destructive">₹{stats.todayPaceDiff.toLocaleString()}</span> over your safe pace of ₹{stats.safeDailyBudget.toLocaleString()}/day.
-                {stats.todaySpikeReason && (
-                  <span>
-                    {" "}Main driver: <strong className="text-foreground">{stats.todaySpikeReason.category}</strong> (₹{stats.todaySpikeReason.amount.toLocaleString()}).
-                  </span>
-                )}
-              </p>
-            </div>
+    <div className={`rounded-xl border ${themeClass} overflow-hidden shadow-sm transition-all duration-200`}>
+      {/* Compact Header Pill Bar */}
+      <div className="px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-1 rounded-md bg-background/50 flex-shrink-0">
+            {showSpike ? (
+              <Zap className="w-3.5 h-3.5 text-destructive" />
+            ) : activeOverCategories.length > 0 ? (
+              <ShieldAlert className="w-3.5 h-3.5 text-destructive" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+            )}
           </div>
 
+          <div className="font-medium text-foreground truncate">
+            {showSpike && (
+              <span>
+                Daily spike: Spent <strong className="text-destructive">₹{stats.todayTotal.toLocaleString()}</strong> today (+₹{stats.todayPaceDiff.toLocaleString()} over pace)
+              </span>
+            )}
+            {!showSpike && activeOverCategories.length > 0 && (
+              <span>
+                Cap exceeded in <strong className="text-destructive">{activeOverCategories[0].category}</strong> ({activeOverCategories[0].percentage}%)
+                {activeOverCategories.length > 1 && ` +${activeOverCategories.length - 1} more`}
+              </span>
+            )}
+            {!showSpike && activeOverCategories.length === 0 && activeNearCategories.length > 0 && (
+              <span>
+                Near cap in <strong className="text-amber-500">{activeNearCategories[0].category}</strong> ({activeNearCategories[0].percentage}%)
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {totalAlerts > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-7 text-[11px] px-2 text-muted-foreground hover:text-foreground gap-1"
+            >
+              <span>{totalAlerts} alerts</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenBudgetModal}
+            className="h-7 text-[11px] px-2 text-foreground/80 hover:text-foreground gap-1"
+          >
+            <Sliders className="w-3 h-3" />
+            <span className="hidden sm:inline">Adjust Caps</span>
+          </Button>
+
           <button
-            onClick={() => setSpikeDismissed(true)}
+            onClick={() => {
+              if (showSpike) setSpikeDismissed(true);
+              const dis: Record<string, boolean> = {};
+              activeOverCategories.forEach((c) => (dis[c.category] = true));
+              activeNearCategories.forEach((c) => (dis[c.category] = true));
+              setDismissedCategories((prev) => ({ ...prev, ...dis }));
+            }}
             className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-            title="Dismiss alert"
-            aria-label="Dismiss alert"
+            title="Dismiss all alerts"
+            aria-label="Dismiss all alerts"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
+      </div>
+
+      {/* Expanded Multi-Alert Details Drawer */}
+      {isExpanded && totalAlerts > 1 && (
+        <div className="px-3.5 pb-3 pt-1 border-t border-border/40 space-y-2 bg-background/20 text-xs animate-in fade-in-50">
+          {showSpike && (
+            <div className="flex items-center justify-between text-muted-foreground py-1">
+              <span>
+                ⚡ Daily safe pace was ₹{stats.safeDailyBudget.toLocaleString()}. Main spend: {stats.todaySpikeReason?.category || "Outflow"}.
+              </span>
+              <button
+                onClick={() => setSpikeDismissed(true)}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {activeOverCategories.map((c) => (
+            <div key={c.category} className="flex items-center justify-between text-muted-foreground py-1">
+              <span>
+                🚨 <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} spent of ₹{c.budget.toLocaleString()} cap ({c.percentage}%).
+              </span>
+              <button
+                onClick={() => dismissCategory(c.category)}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Dismiss
+              </button>
+            </div>
+          ))}
+
+          {activeNearCategories.map((c) => (
+            <div key={c.category} className="flex items-center justify-between text-muted-foreground py-1">
+              <span>
+                ⚠️ <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} / ₹{c.budget.toLocaleString()} ({c.remaining.toLocaleString()} left for {stats.daysRemaining} days).
+              </span>
+              <button
+                onClick={() => dismissCategory(c.category)}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Dismiss
+              </button>
+            </div>
+          ))}
+        </div>
       )}
-
-      {/* 2. Category Over-Budget Alert */}
-      {activeOverCategories.map((c) => (
-        <div
-          key={c.category}
-          className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/10 text-xs text-foreground flex items-start justify-between gap-3 shadow-sm animate-in fade-in-50"
-        >
-          <div className="flex items-start gap-2.5">
-            <div className="p-1 rounded-md bg-destructive/20 text-destructive mt-0.5 flex-shrink-0">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="font-semibold text-destructive flex items-center gap-1.5">
-                <span>Category Cap Exceeded: {c.category}</span>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                Spent <span className="font-semibold text-foreground">₹{c.spent.toLocaleString()}</span> of your ₹{c.budget.toLocaleString()} monthly cap (
-                <strong className="text-destructive">{c.percentage}% consumed</strong>).
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onOpenBudgetModal}
-              className="h-7 text-[11px] px-2 text-muted-foreground hover:text-foreground"
-            >
-              <Sliders className="w-3 h-3 mr-1" />
-              Adjust
-            </Button>
-            <button
-              onClick={() => dismissCategory(c.category)}
-              className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-              title="Dismiss alert"
-              aria-label="Dismiss alert"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      ))}
-
-      {/* 3. Category Near-Budget Alert (>= 85%) */}
-      {activeNearCategories.map((c) => (
-        <div
-          key={c.category}
-          className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-foreground flex items-start justify-between gap-3 shadow-sm animate-in fade-in-50"
-        >
-          <div className="flex items-start gap-2.5">
-            <div className="p-1 rounded-md bg-amber-500/20 text-amber-500 mt-0.5 flex-shrink-0">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="font-semibold text-amber-500 flex items-center gap-1.5">
-                <span>Near Category Limit: {c.category}</span>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">₹{c.spent.toLocaleString()}</span> of ₹{c.budget.toLocaleString()} spent ({c.percentage}% used).{" "}
-                Only <strong className="text-foreground">₹{c.remaining.toLocaleString()}</strong> remaining for {stats.daysRemaining} days.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onOpenBudgetModal}
-              className="h-7 text-[11px] px-2 text-muted-foreground hover:text-foreground"
-            >
-              <Sliders className="w-3 h-3 mr-1" />
-              Adjust
-            </Button>
-            <button
-              onClick={() => dismissCategory(c.category)}
-              className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-              title="Dismiss alert"
-              aria-label="Dismiss alert"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      ))}
     </div>
   );
 };
+
 export default ExpenseAlertBanner;

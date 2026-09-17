@@ -3,6 +3,13 @@ import { ExpenseItem, ExpenseCategory, ExpenseType, CATEGORY_COLORS, EXPENSE_TYP
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Trash2,
   Edit2,
@@ -14,6 +21,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Coffee,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import {
   format,
@@ -47,7 +56,7 @@ const CATEGORIES: ExpenseCategory[] = [
   "Other",
 ];
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props) => {
   const [search, setSearch] = useState("");
@@ -61,6 +70,16 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   useEffect(() => {
     setCurrentPage(1);
   }, [search, selectedCategory, selectedType, dateFilter]);
+
+  const hasActiveFilters =
+    search.trim() !== "" || selectedCategory !== "all" || selectedType !== "all" || dateFilter !== "all";
+
+  const clearAllFilters = () => {
+    setSearch("");
+    setSelectedCategory("all");
+    setSelectedType("all");
+    setDateFilter("all");
+  };
 
   // Filter expenses
   const filteredExpenses = useMemo(() => {
@@ -136,11 +155,11 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
       const dateKey = format(parsed, "yyyy-MM-dd");
 
       if (!groups[dateKey]) {
-        let label = format(parsed, "EEEE, d MMMM yyyy");
+        let label = format(parsed, "EEEE, d MMM yyyy");
         if (isToday(parsed)) {
-          label = `Today (${format(parsed, "d MMM")})`;
+          label = `Today • ${format(parsed, "d MMM")}`;
         } else if (isYesterday(parsed)) {
-          label = `Yesterday (${format(parsed, "d MMM")})`;
+          label = `Yesterday • ${format(parsed, "d MMM")}`;
         }
 
         groups[dateKey] = {
@@ -166,48 +185,57 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   const getPaymentIcon = (method: string) => {
     switch (method) {
       case "UPI":
-        return <Smartphone className="w-3 h-3 mr-1 text-emerald-500" />;
+        return <Smartphone className="w-3 h-3 text-emerald-500" />;
       case "Credit Card":
       case "Debit Card":
-        return <CreditCard className="w-3 h-3 mr-1 text-blue-500" />;
+        return <CreditCard className="w-3 h-3 text-blue-500" />;
       case "Cash":
-        return <Banknote className="w-3 h-3 mr-1 text-amber-500" />;
+        return <Banknote className="w-3 h-3 text-amber-500" />;
       default:
-        return <Globe className="w-3 h-3 mr-1 text-muted-foreground" />;
+        return <Globe className="w-3 h-3 text-muted-foreground" />;
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Controls: Search, Date Filter, Category Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    <div className="space-y-3.5">
+      {/* 1-Row Unified Filter Toolbar */}
+      <div className="p-2 sm:p-2.5 rounded-xl border border-border/80 bg-card/60 backdrop-blur-md shadow-sm flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+        {/* Search Input with inline clear */}
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search note, category..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-xs"
+            className="pl-8 pr-7 h-8 text-xs bg-background/50 border-border/70"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
 
-        {/* Date Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-secondary/40 border border-border rounded-lg self-stretch sm:self-auto justify-between sm:justify-start">
+        {/* Date Segmented Control */}
+        <div className="flex items-center gap-1 bg-secondary/50 p-0.5 rounded-lg border border-border/60 self-stretch sm:self-auto justify-between">
           {(
             [
-              { id: "all", label: "All Time" },
+              { id: "all", label: "All" },
               { id: "today", label: "Today" },
-              { id: "week", label: "This Week" },
-              { id: "month", label: "This Month" },
+              { id: "week", label: "Week" },
+              { id: "month", label: "Month" },
             ] as const
           ).map((filter) => (
             <button
               key={filter.id}
               onClick={() => setDateFilter(filter.id)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
                 dateFilter === filter.id
-                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -215,120 +243,144 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
             </button>
           ))}
         </div>
+
+        {/* Filter Dropdowns: Category & Classification */}
+        <div className="flex items-center gap-1.5 self-stretch sm:self-auto">
+          {/* Category Dropdown */}
+          <div className="flex-1 sm:w-36">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="h-8 text-xs bg-background/50 border-border/70">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">
+                  All Categories
+                </SelectItem>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat} className="text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CATEGORY_COLORS[cat] }}
+                      />
+                      <span className="truncate">{cat}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Classification Dropdown */}
+          <div className="flex-1 sm:w-32">
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="h-8 text-xs bg-background/50 border-border/70">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">
+                  All Types
+                </SelectItem>
+                <SelectItem value="need" className="text-xs">
+                  Needs
+                </SelectItem>
+                <SelectItem value="want" className="text-xs">
+                  Wants
+                </SelectItem>
+                <SelectItem value="investment" className="text-xs">
+                  Investments
+                </SelectItem>
+                <SelectItem value="micro" className="text-xs">
+                  Micro-Leaks (≤ ₹200)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reset Filters button if active */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearAllFilters}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground flex-shrink-0"
+              title="Reset all filters"
+              aria-label="Reset all filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Type & Classification Filters */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-        <span className="text-xs text-muted-foreground mr-1 whitespace-nowrap">Classification:</span>
-        {(
-          [
-            { id: "all", label: "All Types" },
-            { id: "need", label: "Needs", color: "bg-emerald-400" },
-            { id: "want", label: "Wants (Cut These)", color: "bg-amber-400" },
-            { id: "investment", label: "Investments", color: "bg-blue-400" },
-            { id: "micro", label: "Micro-Leaks (≤ ₹200)", icon: Coffee },
-          ] as const
-        ).map((t) => (
+      {/* Transaction Counter & Active Filter Badge */}
+      <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+        <span>
+          Showing <strong className="text-foreground">{filteredExpenses.length}</strong> transaction{filteredExpenses.length === 1 ? "" : "s"}
+        </span>
+        {hasActiveFilters && (
           <button
-            key={t.id}
-            onClick={() => setSelectedType(t.id)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              selectedType === t.id
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
+            onClick={clearAllFilters}
+            className="text-primary hover:underline text-[11px] font-medium"
           >
-            {"color" in t && <span className={`w-1.5 h-1.5 rounded-full ${t.color}`} />}
-            {"icon" in t && <t.icon className="w-3 h-3 text-violet-400" />}
-            <span>{t.label}</span>
+            Clear active filters
           </button>
-        ))}
-      </div>
-
-      {/* Category Pills (Horizontal Scroll) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-        <button
-          onClick={() => setSelectedCategory("all")}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-colors ${
-            selectedCategory === "all"
-              ? "bg-primary text-primary-foreground border-primary"
-              : "border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-          }`}
-        >
-          All Categories ({expenses.length})
-        </button>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-colors ${
-              selectedCategory === cat
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border/70 text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-            }`}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: CATEGORY_COLORS[cat] }}
-            />
-            <span>{cat}</span>
-          </button>
-        ))}
+        )}
       </div>
 
       {/* Grouped Transactions List */}
       {groupedExpenses.length === 0 ? (
-        <div className="py-12 text-center rounded-xl border border-dashed border-border bg-card/20">
-          <Calendar className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
-          <h4 className="text-sm font-medium text-foreground">No expenses found</h4>
-          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            {search || selectedCategory !== "all" || dateFilter !== "all"
-              ? "Try adjusting your search query or filters."
-              : "No expenses logged yet."}
+        <div className="py-12 text-center rounded-xl border border-dashed border-border/80 bg-card/20">
+          <Calendar className="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
+          <h4 className="text-xs font-semibold text-foreground">No matching expenses found</h4>
+          <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
+            {hasActiveFilters
+              ? "Try resetting filters or adjusting search keyword."
+              : "No expenses logged yet. Use the quick add bar above."}
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-3.5">
           {groupedExpenses.map(([dateKey, group]) => (
-            <div key={dateKey} className="space-y-2">
-              {/* Group Header */}
-              <div className="flex items-center justify-between px-1 text-xs">
+            <div key={dateKey} className="space-y-1.5">
+              {/* Group Subtotal Header */}
+              <div className="flex items-center justify-between px-1.5 text-[11px]">
                 <span className="font-semibold text-foreground/80 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Calendar className="w-3 h-3 text-muted-foreground" />
                   {group.label}
                 </span>
-                <span className="font-mono font-medium text-muted-foreground">
-                  Subtotal: <span className="text-foreground font-semibold">₹{group.total.toLocaleString()}</span>
+                <span className="font-mono text-muted-foreground">
+                  Day Total: <span className="text-foreground font-semibold">₹{group.total.toLocaleString()}</span>
                 </span>
               </div>
 
-              {/* Items Card */}
-              <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm divide-y divide-border/60 overflow-hidden shadow-sm">
+              {/* Dense Items Card */}
+              <div className="rounded-xl border border-border/70 bg-card/50 backdrop-blur-sm divide-y divide-border/40 overflow-hidden shadow-xs">
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 sm:p-4 flex items-center justify-between gap-3 hover:bg-secondary/20 transition-colors group"
+                    className="py-2.5 px-3 sm:px-4 flex items-center justify-between gap-3 hover:bg-secondary/25 transition-colors group"
                   >
-                    {/* Left: Category dot + Note & Category */}
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Left: Category dot + Note & Metadata */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div
                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: CATEGORY_COLORS[item.category] || "#64748b" }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-foreground truncate">
+                        <div className="text-xs sm:text-sm font-medium text-foreground truncate">
                           {item.notes || item.category}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
                           <span>{item.category}</span>
                           <span>•</span>
-                          <span className="flex items-center">
+                          <span className="inline-flex items-center gap-1">
                             {getPaymentIcon(item.payment_method)}
                             {item.payment_method}
                           </span>
                           <span>•</span>
                           <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium border ${
                               EXPENSE_TYPE_LABELS[item.expense_type || "need"]?.badgeClass ||
                               "bg-secondary text-muted-foreground"
                             }`}
@@ -337,8 +389,8 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                           </span>
                           {Number(item.amount) <= 200 && (
                             <span
-                              title="Micro-transaction under ₹200"
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                              title="Micro-transaction ≤ ₹200"
+                              className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[9px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20"
                             >
                               <Coffee className="w-2.5 h-2.5" />
                               ≤₹200
@@ -349,15 +401,15 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                     </div>
 
                     {/* Right: Amount & Action Buttons */}
-                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                      <div className="text-sm sm:text-base font-bold text-foreground">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                      <div className="text-xs sm:text-sm font-bold text-foreground font-mono tabular-nums">
                         ₹{Number(item.amount).toLocaleString()}
                       </div>
 
-                      <div className="flex items-center gap-1 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-0.5 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => onEditExpense(item)}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                           title="Edit"
                           aria-label="Edit"
                         >
@@ -366,7 +418,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                         <button
                           onClick={() => handleDelete(item.id)}
                           disabled={deletingId === item.id}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                           title="Delete"
                           aria-label="Delete"
                         >
@@ -380,26 +432,25 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
             </div>
           ))}
 
-          {/* Pagination Controls */}
+          {/* Compact Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border/60">
-              <span className="text-xs text-muted-foreground order-2 sm:order-1">
-                Showing <span className="font-semibold text-foreground">{startIndex + 1}</span>–<span className="font-semibold text-foreground">{endIndex}</span> of <span className="font-semibold text-foreground">{totalItems}</span> transactions
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-border/40">
+              <span className="text-[11px] text-muted-foreground order-2 sm:order-1">
+                {startIndex + 1}–{endIndex} of {totalItems} items
               </span>
 
-              <div className="flex items-center gap-1.5 order-1 sm:order-2">
+              <div className="flex items-center gap-1 order-1 sm:order-2">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={validPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="h-8 px-2.5 text-xs gap-1"
+                  className="h-7 px-2 text-xs gap-1"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Previous</span>
+                  <ChevronLeft className="w-3 h-3" />
+                  <span>Prev</span>
                 </Button>
 
-                {/* Page Number Chips */}
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .filter((page) => {
@@ -411,13 +462,13 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
 
                       return (
                         <span key={page} className="flex items-center">
-                          {hasGap && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                          {hasGap && <span className="px-0.5 text-[10px] text-muted-foreground">...</span>}
                           <button
                             onClick={() => setCurrentPage(page)}
-                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md text-xs font-medium transition-colors ${
+                            className={`w-6 h-6 sm:w-7 sm:h-7 rounded text-xs font-medium transition-colors ${
                               validPage === page
-                                ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                             }`}
                           >
                             {page}
@@ -432,10 +483,10 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                   size="sm"
                   disabled={validPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="h-8 px-2.5 text-xs gap-1"
+                  className="h-7 px-2 text-xs gap-1"
                 >
                   <span>Next</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-3 h-3" />
                 </Button>
               </div>
             </div>
@@ -445,4 +496,5 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
     </div>
   );
 };
+
 export default ExpenseList;
