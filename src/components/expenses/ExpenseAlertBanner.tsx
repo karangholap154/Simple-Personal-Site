@@ -115,13 +115,13 @@ export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
       {isExpanded && totalAlerts > 1 && (
         <div className="px-3.5 pb-3 pt-1 border-t border-border/40 space-y-2 bg-background/20 text-xs animate-in fade-in-50">
           {showSpike && (
-            <div className="flex items-center justify-between text-muted-foreground py-1">
-              <span>
+            <div className="flex items-start sm:items-center justify-between gap-2 text-muted-foreground py-1">
+              <span className="min-w-0 leading-snug">
                 ⚡ Daily safe pace was ₹{stats.safeDailyBudget.toLocaleString()}. Main spend: {stats.todaySpikeReason?.category || "Outflow"}.
               </span>
               <button
                 onClick={() => setSpikeDismissed(true)}
-                className="text-[10px] text-muted-foreground hover:text-foreground"
+                className="text-[10px] text-muted-foreground hover:text-foreground flex-shrink-0 pt-0.5 sm:pt-0"
               >
                 Dismiss
               </button>
@@ -129,13 +129,13 @@ export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
           )}
 
           {activeOverCategories.map((c) => (
-            <div key={c.category} className="flex items-center justify-between text-muted-foreground py-1">
-              <span>
+            <div key={c.category} className="flex items-start sm:items-center justify-between gap-2 text-muted-foreground py-1">
+              <span className="min-w-0 leading-snug">
                 🚨 <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} spent of ₹{c.budget.toLocaleString()} cap ({c.percentage}%).
               </span>
               <button
                 onClick={() => dismissCategory(c.category)}
-                className="text-[10px] text-muted-foreground hover:text-foreground"
+                className="text-[10px] text-muted-foreground hover:text-foreground flex-shrink-0 pt-0.5 sm:pt-0"
               >
                 Dismiss
               </button>
@@ -143,13 +143,13 @@ export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
           ))}
 
           {activeNearCategories.map((c) => (
-            <div key={c.category} className="flex items-center justify-between text-muted-foreground py-1">
-              <span>
+            <div key={c.category} className="flex items-start sm:items-center justify-between gap-2 text-muted-foreground py-1">
+              <span className="min-w-0 leading-snug">
                 ⚠️ <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} / ₹{c.budget.toLocaleString()} ({c.remaining.toLocaleString()} left for {stats.daysRemaining} days).
               </span>
               <button
                 onClick={() => dismissCategory(c.category)}
-                className="text-[10px] text-muted-foreground hover:text-foreground"
+                className="text-[10px] text-muted-foreground hover:text-foreground flex-shrink-0 pt-0.5 sm:pt-0"
               >
                 Dismiss
               </button>

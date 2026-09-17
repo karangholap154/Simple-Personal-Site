@@ -167,7 +167,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
                     type="button"
                     onClick={() => setExpenseType(t)}
                     title={meta.description}
-                    className={`py-1.5 px-1 rounded-md text-xs font-medium border text-center transition-all ${
+                    className={`py-1.5 px-1 rounded-md text-[11px] sm:text-xs font-medium border text-center transition-all truncate ${
                       isSelected
                         ? meta.activeClass
                         : "border-border/40 bg-secondary/40 text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
@@ -199,7 +199,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:dark]"
             />
           </div>
 

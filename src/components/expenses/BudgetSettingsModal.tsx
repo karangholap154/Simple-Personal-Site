@@ -84,7 +84,7 @@ export const BudgetSettingsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md max-h-[88dvh] rounded-2xl sm:rounded-xl flex flex-col p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[88dvh] rounded-2xl sm:rounded-xl flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Wallet className="w-5 h-5 text-primary" />
@@ -131,7 +131,7 @@ export const BudgetSettingsModal = ({
               </div>
 
               {totalCategoryAllocated > 0 && (
-                <div className="p-3 rounded-lg border border-border bg-secondary/30 text-xs text-muted-foreground flex items-center justify-between">
+                <div className="p-3 rounded-lg border border-border bg-secondary/30 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span>Category caps allocated:</span>
                   <span className="font-semibold text-foreground font-mono">
                     ₹{totalCategoryAllocated.toLocaleString()} / ₹{parseFloat(overallBudget || "0").toLocaleString()}
@@ -142,18 +142,18 @@ export const BudgetSettingsModal = ({
 
             {/* Tab 2: Category Spending Caps */}
             <TabsContent value="categories" className="space-y-3 pt-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1">
                 <p className="leading-tight">
                   Set optional monthly spending ceilings for high-leak categories.
                 </p>
                 {totalCategoryAllocated > 0 && (
-                  <span className="font-semibold text-foreground whitespace-nowrap pl-2 font-mono">
+                  <span className="font-semibold text-foreground whitespace-nowrap font-mono self-start sm:self-auto">
                     ₹{totalCategoryAllocated.toLocaleString()} cap
                   </span>
                 )}
               </div>
 
-              <div className="space-y-2 max-h-[42vh] overflow-y-auto pr-1">
+              <div className="space-y-2 pr-1">
                 {CATEGORIES.map((cat) => (
                   <div
                     key={cat}

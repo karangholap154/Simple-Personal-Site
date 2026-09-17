@@ -130,7 +130,7 @@ export const ExpenseSummaryCards = ({ stats, onOpenBudgetModal }: Props) => {
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-border/40 space-y-1">
-          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-muted-foreground flex-wrap gap-x-2 gap-y-0.5">
             <span className="flex items-center gap-1 truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
               Needs: ₹{stats.needsTotal.toLocaleString()}
