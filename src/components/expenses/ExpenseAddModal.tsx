@@ -103,6 +103,7 @@ export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense }: Props) => {
                 step="any"
                 min="1"
                 required
+                autoFocus
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}

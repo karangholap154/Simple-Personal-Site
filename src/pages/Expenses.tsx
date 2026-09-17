@@ -1,11 +1,14 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useExpenses } from "@/hooks/useExpenses";
 import { ExpenseItem } from "@/types/expenses";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 import ExpenseSummaryCards from "@/components/expenses/ExpenseSummaryCards";
 import ExpenseAddModal from "@/components/expenses/ExpenseAddModal";
@@ -34,6 +37,7 @@ import {
   LogOut,
   Sliders,
   Plus,
+  Loader2,
 } from "lucide-react";
 
 const Expenses = () => {
@@ -60,10 +64,66 @@ const Expenses = () => {
     signOut,
   } = useExpenses();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Direct login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Auto-open Add Expense modal if ?add=true, ?new=1, or ?action=new
+  useEffect(() => {
+    if (isCloudSynced) {
+      const shouldAdd =
+        searchParams.get("add") === "true" ||
+        searchParams.get("new") === "1" ||
+        searchParams.get("action") === "new";
+
+      if (shouldAdd) {
+        setIsAddModalOpen(true);
+        // Clean URL params without refresh
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("add");
+        newParams.delete("new");
+        newParams.delete("action");
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [isCloudSynced, searchParams, setSearchParams]);
+
+  const handleQuickLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginSubmitting(true);
+    setLoginError(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+      if (error) throw error;
+      toast({
+        title: "Authenticated successfully!",
+        description: "Welcome back! Expenses tracker loaded.",
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLoginError(msg);
+      toast({
+        title: "Authentication failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setLoginSubmitting(false);
+    }
+  };
 
   return (
     <PageTransition>
@@ -237,49 +297,95 @@ const Expenses = () => {
           ) : (
             /* Guest / Visitor Locked State */
             <div className="space-y-8 py-4">
-              {/* Hero Authentication Card */}
-              <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card/80 via-card/40 to-card/20 p-6 sm:p-10 backdrop-blur-md shadow-sm">
+              {/* Hero Authentication Card with Direct Quick Login */}
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-card/80 via-card/40 to-card/20 p-6 sm:p-8 backdrop-blur-md shadow-sm">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
 
-                <div className="max-w-xl mx-auto text-center space-y-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary mx-auto flex items-center justify-center shadow-inner">
-                    <Lock className="w-6 h-6" />
-                  </div>
-
-                  <div className="space-y-2">
+                <div className="max-w-md mx-auto space-y-5">
+                  <div className="text-center space-y-2">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary mx-auto flex items-center justify-center shadow-inner">
+                      <Lock className="w-6 h-6" />
+                    </div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                      Authentication Required
+                      Admin Access Required
                     </h2>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      To add, edit, or view personal daily expenses, you must be logged in with the authorized administrator account.
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      Sign in directly to record daily expenses, monitor category limits, and view cash flow analytics.
                     </p>
                   </div>
+
+                  {/* Direct Inline Login Form */}
+                  <form onSubmit={handleQuickLogin} className="space-y-3 bg-secondary/30 p-4 sm:p-5 rounded-xl border border-border/80">
+                    <div className="space-y-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground">Email Address</label>
+                      <Input
+                        type="email"
+                        placeholder="karan@example.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        autoComplete="username"
+                        required
+                        className="h-9 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground">Password</label>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        autoComplete="current-password"
+                        required
+                        className="h-9 text-sm"
+                      />
+                    </div>
+
+                    {loginError && (
+                      <p className="text-xs text-destructive text-left font-medium">{loginError}</p>
+                    )}
+
+                    <Button type="submit" disabled={loginSubmitting} className="w-full h-9 font-medium gap-2">
+                      {loginSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Signing In...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Log In & Continue</span>
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="pt-2 flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/60">
+                      <Link
+                        to="/admin?redirect=/expenses"
+                        className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                      >
+                        <span>Full Admin Panel</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                      <Link
+                        to="/projects"
+                        className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+                      >
+                        <span>Explore Projects</span>
+                      </Link>
+                    </div>
+                  </form>
 
                   {/* Notice Callout */}
-                  <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs text-muted-foreground text-left space-y-1.5">
+                  <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs text-muted-foreground text-left space-y-1">
                     <div className="flex items-center gap-1.5 font-semibold text-amber-400">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Something exciting is brewing!</span>
+                      <span>Bookmark Tip</span>
                     </div>
-                    <p className="text-foreground/80 leading-normal">
-                      We're currently designing an interactive public experience for this page. Stay tuned for upcoming updates!
+                    <p className="text-foreground/80 leading-normal text-[11px]">
+                      Add <code className="text-primary font-mono font-medium">/expenses?add=true</code> to your mobile home screen or bookmarks bar to open the tracker with the Add Expense dialog ready instantly.
                     </p>
-                  </div>
-
-                  {/* CTAs */}
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <Button asChild className="w-full sm:w-auto font-medium gap-2">
-                      <Link to="/admin">
-                        <ShieldCheck className="w-4 h-4" />
-                        Log In as Admin
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </Button>
-                    <Button variant="outline" asChild className="w-full sm:w-auto font-medium">
-                      <Link to="/projects">
-                        Explore Projects
-                      </Link>
-                    </Button>
                   </div>
                 </div>
               </div>

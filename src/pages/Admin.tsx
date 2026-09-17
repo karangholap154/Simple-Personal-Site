@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
@@ -9,7 +9,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Lock, Mail, Briefcase, GraduationCap, Award, Trash2, Edit, Plus, 
-  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2, Activity, ArrowLeft
+  LogOut, CheckCircle, MessageSquare, PlusCircle, X, ExternalLink, RefreshCw, Upload, FileUp, Loader2, Activity, ArrowLeft,
+  Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,10 @@ interface CertificationItem {
 const Admin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || searchParams.get("redirectTo");
+
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState("");
@@ -66,15 +71,21 @@ const Admin = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
+      if (session && redirectPath && redirectPath.startsWith("/")) {
+        navigate(redirectPath, { replace: true });
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setAuthLoading(false);
+      if (session && redirectPath && redirectPath.startsWith("/")) {
+        navigate(redirectPath, { replace: true });
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [redirectPath, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +96,10 @@ const Admin = () => {
       toast({
         title: "Logged in successfully!",
       });
+      if (redirectPath && redirectPath.startsWith("/")) {
+        navigate(redirectPath, { replace: true });
+        return;
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       toast({
@@ -617,6 +632,13 @@ const Admin = () => {
               </p>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <Button variant="outline" size="sm" asChild className="flex items-center gap-1.5 text-xs">
+                <Link to="/expenses">
+                  <Wallet className="h-3.5 w-3.5 text-primary" />
+                  <span>Daily Expenses</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" onClick={handleSignOut} className="flex items-center gap-1.5 text-xs">
                 <LogOut className="h-3.5 w-3.5" />
                 <span>Sign Out</span>
