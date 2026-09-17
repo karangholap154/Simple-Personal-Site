@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ExpenseItem, ExpenseCategory, PaymentMethod, CATEGORY_COLORS } from "@/types/expenses";
+import { ExpenseItem, ExpenseCategory, PaymentMethod, ExpenseType, CATEGORY_COLORS, EXPENSE_TYPE_LABELS } from "@/types/expenses";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>("Food & Dining");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
+  const [expenseType, setExpenseType] = useState<ExpenseType>("need");
   const [notes, setNotes] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
       setAmount(expense.amount.toString());
       setCategory(expense.category);
       setPaymentMethod(expense.payment_method);
+      setExpenseType(expense.expense_type || "need");
       setNotes(expense.notes || "");
       try {
         setDate(format(parseISO(expense.date), "yyyy-MM-dd"));
@@ -73,6 +75,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
       amount: numAmount,
       category,
       payment_method: paymentMethod,
+      expense_type: expenseType,
       notes: notes.trim(),
       date: new Date(date).toISOString(),
     });
@@ -148,6 +151,32 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Classification (Need / Want / Investment) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Classification</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["need", "want", "investment"] as ExpenseType[]).map((t) => {
+                const isSelected = expenseType === t;
+                const meta = EXPENSE_TYPE_LABELS[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setExpenseType(t)}
+                    title={meta.description}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                      isSelected
+                        ? meta.activeClass
+                        : "border-border/60 bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
+                  >
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Notes */}

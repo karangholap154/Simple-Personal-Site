@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExpenseCategory, PaymentMethod, CATEGORY_COLORS } from "@/types/expenses";
+import { ExpenseCategory, PaymentMethod, ExpenseType, CATEGORY_COLORS, EXPENSE_TYPE_LABELS } from "@/types/expenses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,7 @@ interface Props {
     amount: number;
     category: ExpenseCategory;
     payment_method: PaymentMethod;
+    expense_type: ExpenseType;
     notes: string;
     date: string;
   }) => Promise<boolean>;
@@ -40,6 +41,7 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>("Food & Dining");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
+  const [expenseType, setExpenseType] = useState<ExpenseType>("need");
   const [notes, setNotes] = useState<string>("");
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +56,7 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
       amount: numAmount,
       category,
       payment_method: paymentMethod,
+      expense_type: expenseType,
       notes: notes.trim(),
       date: new Date(date).toISOString(),
     });
@@ -142,16 +145,51 @@ export const ExpenseQuickAdd = ({ onAddExpense }: Props) => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 border-t border-border/40">
-          {/* Custom Date */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full sm:w-auto text-xs bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-border/40">
+          {/* Classification & Date */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Expense Type Buttons */}
+            <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-lg border border-border/50">
+              {(["need", "want", "investment"] as ExpenseType[]).map((t) => {
+                const isSelected = expenseType === t;
+                const meta = EXPENSE_TYPE_LABELS[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setExpenseType(t)}
+                    title={meta.description}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? meta.activeClass
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/70"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        t === "need"
+                          ? "bg-emerald-400"
+                          : t === "want"
+                          ? "bg-amber-400"
+                          : "bg-blue-400"
+                      }`}
+                    />
+                    <span>{meta.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Date */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Date:</span>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="text-xs bg-secondary/50 border border-border rounded-md px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
           </div>
 
           {/* Submit Button */}

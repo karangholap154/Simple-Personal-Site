@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ExpenseItem, ExpenseCategory, CATEGORY_COLORS } from "@/types/expenses";
+import { ExpenseItem, ExpenseCategory, ExpenseType, CATEGORY_COLORS, EXPENSE_TYPE_LABELS } from "@/types/expenses";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   Globe,
   ChevronLeft,
   ChevronRight,
+  Coffee,
 } from "lucide-react";
 import {
   format,
@@ -51,6 +52,7 @@ const ITEMS_PER_PAGE = 10;
 export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props) => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   // Reset pagination to page 1 whenever filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory, dateFilter]);
+  }, [search, selectedCategory, selectedType, dateFilter]);
 
   // Filter expenses
   const filteredExpenses = useMemo(() => {
@@ -70,6 +72,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
 
     return expenses.filter((item) => {
       const itemDate = parseISO(item.date);
+      const itemType = item.expense_type || "need";
 
       // Search match
       if (search.trim()) {
@@ -78,7 +81,8 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
         const matchesCategory = item.category.toLowerCase().includes(query);
         const matchesPayment = item.payment_method.toLowerCase().includes(query);
         const matchesAmount = item.amount.toString().includes(query);
-        if (!matchesNote && !matchesCategory && !matchesPayment && !matchesAmount) {
+        const matchesType = itemType.toLowerCase().includes(query);
+        if (!matchesNote && !matchesCategory && !matchesPayment && !matchesAmount && !matchesType) {
           return false;
         }
       }
@@ -86,6 +90,15 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
       // Category filter
       if (selectedCategory !== "all" && item.category !== selectedCategory) {
         return false;
+      }
+
+      // Type filter
+      if (selectedType !== "all") {
+        if (selectedType === "micro") {
+          if (item.amount > 200) return false;
+        } else if (itemType !== selectedType) {
+          return false;
+        }
       }
 
       // Date filter
@@ -101,7 +114,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
 
       return true;
     });
-  }, [expenses, search, selectedCategory, dateFilter]);
+  }, [expenses, search, selectedCategory, selectedType, dateFilter]);
 
   // Pagination calculations
   const totalItems = filteredExpenses.length;
@@ -204,6 +217,34 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
         </div>
       </div>
 
+      {/* Type & Classification Filters */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+        <span className="text-xs text-muted-foreground mr-1 whitespace-nowrap">Classification:</span>
+        {(
+          [
+            { id: "all", label: "All Types" },
+            { id: "need", label: "Needs", color: "bg-emerald-400" },
+            { id: "want", label: "Wants (Cut These)", color: "bg-amber-400" },
+            { id: "investment", label: "Investments", color: "bg-blue-400" },
+            { id: "micro", label: "Micro-Leaks (≤ ₹200)", icon: Coffee },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSelectedType(t.id)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              selectedType === t.id
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "border-border/60 bg-secondary/30 text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+          >
+            {"color" in t && <span className={`w-1.5 h-1.5 rounded-full ${t.color}`} />}
+            {"icon" in t && <t.icon className="w-3 h-3 text-violet-400" />}
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Category Pills (Horizontal Scroll) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <button
@@ -278,13 +319,31 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                         <div className="text-sm font-medium text-foreground truncate">
                           {item.notes || item.category}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
                           <span>{item.category}</span>
                           <span>•</span>
                           <span className="flex items-center">
                             {getPaymentIcon(item.payment_method)}
                             {item.payment_method}
                           </span>
+                          <span>•</span>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                              EXPENSE_TYPE_LABELS[item.expense_type || "need"]?.badgeClass ||
+                              "bg-secondary text-muted-foreground"
+                            }`}
+                          >
+                            {EXPENSE_TYPE_LABELS[item.expense_type || "need"]?.label || "Need"}
+                          </span>
+                          {Number(item.amount) <= 200 && (
+                            <span
+                              title="Micro-transaction under ₹200"
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                            >
+                              <Coffee className="w-2.5 h-2.5" />
+                              ≤₹200
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { ExpenseItem, ExpenseStats, ExpenseCategory } from "@/types/expenses";
 import { useToast } from "@/hooks/use-toast";
-import { startOfDay, endOfDay, startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from "date-fns";
+import { startOfDay, endOfDay, startOfMonth, endOfMonth, isWithinInterval, parseISO, format, getDaysInMonth } from "date-fns";
 
 const BUDGET_STORAGE_KEY = "karan_monthly_budget_v1";
 const DEFAULT_BUDGET = 25000;
@@ -128,6 +128,7 @@ export function useExpenses() {
         amount: item.amount,
         category: item.category,
         payment_method: item.payment_method,
+        expense_type: item.expense_type || "need",
         notes: item.notes || "",
         date: item.date || new Date().toISOString(),
       };
@@ -241,10 +242,11 @@ export function useExpenses() {
       return;
     }
 
-    const headers = ["Date", "Category", "Amount (INR)", "Payment Method", "Notes"];
+    const headers = ["Date", "Category", "Type", "Amount (INR)", "Payment Method", "Notes"];
     const rows = expenses.map((e) => [
       format(parseISO(e.date), "yyyy-MM-dd"),
       `"${e.category}"`,
+      `"${(e.expense_type || "need").toUpperCase()}"`,
       e.amount,
       `"${e.payment_method}"`,
       `"${(e.notes || "").replace(/"/g, '""')}"`,
@@ -266,7 +268,7 @@ export function useExpenses() {
     });
   };
 
-  // Compute summary stats
+  // Compute summary stats & smart spending metrics
   const stats: ExpenseStats = useMemo(() => {
     const now = new Date();
     const todayStart = startOfDay(now);
@@ -278,11 +280,17 @@ export function useExpenses() {
     let todayCount = 0;
     let monthTotal = 0;
     let monthCount = 0;
+    let needsTotal = 0;
+    let wantsTotal = 0;
+    let investmentTotal = 0;
+    let microSpendTotal = 0;
+    let microSpendCount = 0;
     const categoryTotals: Record<string, number> = {};
 
     expenses.forEach((item) => {
       const itemDate = parseISO(item.date);
       const amount = Number(item.amount) || 0;
+      const type = item.expense_type || "need";
 
       // Today
       if (isWithinInterval(itemDate, { start: todayStart, end: todayEnd })) {
@@ -295,11 +303,50 @@ export function useExpenses() {
         monthTotal += amount;
         monthCount += 1;
         categoryTotals[item.category] = (categoryTotals[item.category] || 0) + amount;
+
+        // Needs vs Wants vs Investment breakdown
+        if (type === "want") {
+          wantsTotal += amount;
+        } else if (type === "investment") {
+          investmentTotal += amount;
+        } else {
+          needsTotal += amount;
+        }
+
+        // Micro-spend leakage: transactions <= ₹200
+        if (amount <= 200) {
+          microSpendTotal += amount;
+          microSpendCount += 1;
+        }
       }
     });
 
     const dayOfMonth = now.getDate();
+    const daysInCurrentMonth = getDaysInMonth(now);
+    // Days remaining in this month, including today
+    const daysRemaining = Math.max(1, daysInCurrentMonth - dayOfMonth + 1);
     const averageDaily = dayOfMonth > 0 ? Math.round(monthTotal / dayOfMonth) : 0;
+
+    // Remaining total monthly budget
+    const remainingBudget = Math.max(0, monthlyBudget - monthTotal);
+
+    // Safe Daily Budget:
+    // Amount available for today and rest of month divided by daysRemaining
+    const availableForRestOfMonth = Math.max(0, monthlyBudget - (monthTotal - todayTotal));
+    const safeDailyBudget = daysRemaining > 0 ? Math.round(availableForRestOfMonth / daysRemaining) : 0;
+
+    let todayPaceStatus: "under" | "over" | "exact" = "exact";
+    if (todayTotal > safeDailyBudget) {
+      todayPaceStatus = "over";
+    } else if (todayTotal < safeDailyBudget) {
+      todayPaceStatus = "under";
+    }
+    const todayPaceDiff = Math.abs(todayTotal - safeDailyBudget);
+
+    const needsPercentage = monthTotal > 0 ? Math.round((needsTotal / monthTotal) * 100) : 0;
+    const wantsPercentage = monthTotal > 0 ? Math.round((wantsTotal / monthTotal) * 100) : 0;
+    const investmentPercentage = monthTotal > 0 ? Math.round((investmentTotal / monthTotal) * 100) : 0;
+    const microSpendPercentage = monthTotal > 0 ? Math.round((microSpendTotal / monthTotal) * 100) : 0;
 
     let topCategory: { category: ExpenseCategory; amount: number } | null = null;
     let maxAmount = 0;
@@ -321,6 +368,20 @@ export function useExpenses() {
       monthlyBudget,
       budgetPercentage,
       topCategory,
+      safeDailyBudget,
+      todayPaceStatus,
+      todayPaceDiff,
+      daysRemaining,
+      remainingBudget,
+      needsTotal,
+      wantsTotal,
+      investmentTotal,
+      needsPercentage,
+      wantsPercentage,
+      investmentPercentage,
+      microSpendTotal,
+      microSpendCount,
+      microSpendPercentage,
     };
   }, [expenses, monthlyBudget]);
 
