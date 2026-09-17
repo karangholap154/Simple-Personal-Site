@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
-import { ExpenseItem, ExpenseStats, ExpenseCategory } from "@/types/expenses";
+import { ExpenseItem, ExpenseStats, ExpenseCategory, CategoryBudgets, CategoryBudgetStatus } from "@/types/expenses";
 import { useToast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, isWithinInterval, parseISO, format, getDaysInMonth } from "date-fns";
 
 const BUDGET_STORAGE_KEY = "karan_monthly_budget_v1";
+const CATEGORY_BUDGETS_STORAGE_KEY = "karan_category_budgets_v1";
 const DEFAULT_BUDGET = 25000;
 
 export function useExpenses() {
@@ -17,6 +18,14 @@ export function useExpenses() {
   const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
     const saved = localStorage.getItem(BUDGET_STORAGE_KEY);
     return saved ? Number(saved) : DEFAULT_BUDGET;
+  });
+  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudgets>(() => {
+    try {
+      const saved = localStorage.getItem(CATEGORY_BUDGETS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
 
   // Track Supabase Auth session
@@ -48,19 +57,32 @@ export function useExpenses() {
         if (error) throw error;
         setExpenses((data as ExpenseItem[]) || []);
 
-        // Fetch monthly budget from site_settings
-        const { data: budgetData } = await supabase
+        // Fetch monthly budget & category budgets from site_settings
+        const { data: settingsData } = await supabase
           .from("site_settings")
-          .select("value")
-          .eq("key", "monthly_budget")
-          .maybeSingle();
+          .select("key, value")
+          .in("key", ["monthly_budget", "category_budgets"]);
 
-        if (budgetData?.value) {
-          const parsed = Number(budgetData.value);
-          if (!isNaN(parsed) && parsed > 0) {
-            setMonthlyBudget(parsed);
-            localStorage.setItem(BUDGET_STORAGE_KEY, parsed.toString());
-          }
+        if (settingsData && settingsData.length > 0) {
+          settingsData.forEach((setting) => {
+            if (setting.key === "monthly_budget" && setting.value) {
+              const parsed = Number(setting.value);
+              if (!isNaN(parsed) && parsed > 0) {
+                setMonthlyBudget(parsed);
+                localStorage.setItem(BUDGET_STORAGE_KEY, parsed.toString());
+              }
+            } else if (setting.key === "category_budgets" && setting.value) {
+              try {
+                const parsedCats = JSON.parse(setting.value);
+                if (parsedCats && typeof parsedCats === "object") {
+                  setCategoryBudgets(parsedCats);
+                  localStorage.setItem(CATEGORY_BUDGETS_STORAGE_KEY, JSON.stringify(parsedCats));
+                }
+              } catch (e) {
+                console.error("Failed to parse category_budgets:", e);
+              }
+            }
+          });
         }
       } else {
         // Guests: No localstorage records, locked state
@@ -106,6 +128,31 @@ export function useExpenses() {
     toast({
       title: "Budget updated",
       description: `Monthly budget set to ₹${newBudget.toLocaleString()} (synced to cloud)`,
+    });
+  };
+
+  // Update category budgets and sync to Supabase
+  const updateCategoryBudgets = async (newBudgets: CategoryBudgets) => {
+    setCategoryBudgets(newBudgets);
+    localStorage.setItem(CATEGORY_BUDGETS_STORAGE_KEY, JSON.stringify(newBudgets));
+
+    if (session?.user) {
+      try {
+        const { error } = await supabase.from("site_settings").upsert({
+          key: "category_budgets",
+          value: JSON.stringify(newBudgets),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("Failed to sync category budgets to Supabase:", err);
+      }
+    }
+
+    toast({
+      title: "Category limits updated",
+      description: "Your category spending caps have been saved and synced.",
     });
   };
 
@@ -286,6 +333,7 @@ export function useExpenses() {
     let microSpendTotal = 0;
     let microSpendCount = 0;
     const categoryTotals: Record<string, number> = {};
+    const todayCategoryTotals: Record<string, number> = {};
 
     expenses.forEach((item) => {
       const itemDate = parseISO(item.date);
@@ -296,6 +344,7 @@ export function useExpenses() {
       if (isWithinInterval(itemDate, { start: todayStart, end: todayEnd })) {
         todayTotal += amount;
         todayCount += 1;
+        todayCategoryTotals[item.category] = (todayCategoryTotals[item.category] || 0) + amount;
       }
 
       // This Month
@@ -359,6 +408,53 @@ export function useExpenses() {
 
     const budgetPercentage = monthlyBudget > 0 ? Math.min(100, Math.round((monthTotal / monthlyBudget) * 100)) : 0;
 
+    // Category micro-budgets evaluation
+    const categoryBudgetStatuses: CategoryBudgetStatus[] = Object.entries(categoryBudgets)
+      .filter(([_, cap]) => typeof cap === "number" && (cap as number) > 0)
+      .map(([cat, cap]) => {
+        const spent = categoryTotals[cat] || 0;
+        const budget = cap as number;
+        const percentage = Math.round((spent / budget) * 100);
+        const remaining = Math.max(0, budget - spent);
+        return {
+          category: cat as ExpenseCategory,
+          spent,
+          budget,
+          percentage,
+          remaining,
+          isOverBudget: spent > budget,
+          isNearBudget: percentage >= 85 && percentage < 100,
+        };
+      })
+      .sort((a, b) => b.percentage - a.percentage);
+
+    const overBudgetCategories = categoryBudgetStatuses.filter((s) => s.isOverBudget);
+    const nearBudgetCategories = categoryBudgetStatuses.filter((s) => s.isNearBudget);
+
+    // Detect today's spending spike
+    const hasSpikeToday =
+      safeDailyBudget > 0 &&
+      todayTotal >= safeDailyBudget * 1.5 &&
+      todayTotal - safeDailyBudget >= 300;
+
+    let todaySpikeReason: { category: ExpenseCategory; amount: number } | undefined;
+    if (hasSpikeToday) {
+      let maxTodayCat = "";
+      let maxTodayAmt = 0;
+      Object.entries(todayCategoryTotals).forEach(([cat, amt]) => {
+        if (amt > maxTodayAmt) {
+          maxTodayAmt = amt;
+          maxTodayCat = cat;
+        }
+      });
+      if (maxTodayCat) {
+        todaySpikeReason = {
+          category: maxTodayCat as ExpenseCategory,
+          amount: maxTodayAmt,
+        };
+      }
+    }
+
     return {
       todayTotal,
       todayCount,
@@ -382,8 +478,13 @@ export function useExpenses() {
       microSpendTotal,
       microSpendCount,
       microSpendPercentage,
+      categoryBudgetStatuses,
+      hasSpikeToday,
+      todaySpikeReason,
+      overBudgetCategories,
+      nearBudgetCategories,
     };
-  }, [expenses, monthlyBudget]);
+  }, [expenses, monthlyBudget, categoryBudgets]);
 
   const signOut = async () => {
     try {
@@ -408,10 +509,12 @@ export function useExpenses() {
     stats,
     isCloudSynced: !!session?.user,
     userEmail: session?.user?.email,
+    categoryBudgets,
     addExpense,
     updateExpense,
     deleteExpense,
     updateMonthlyBudget,
+    updateCategoryBudgets,
     exportToCSV,
     signOut,
     refetch: fetchExpenses,

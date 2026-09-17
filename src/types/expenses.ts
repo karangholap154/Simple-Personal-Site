@@ -25,6 +25,18 @@ export interface ExpenseItem {
   created_at?: string;
 }
 
+export type CategoryBudgets = Partial<Record<ExpenseCategory, number>>;
+
+export interface CategoryBudgetStatus {
+  category: ExpenseCategory;
+  spent: number;
+  budget: number;
+  percentage: number;
+  remaining: number;
+  isOverBudget: boolean;
+  isNearBudget: boolean;
+}
+
 export interface ExpenseStats {
   todayTotal: number;
   todayCount: number;
@@ -52,6 +64,12 @@ export interface ExpenseStats {
   microSpendTotal: number;
   microSpendCount: number;
   microSpendPercentage: number;
+  // Category Micro-Budgets & Spike Alerts
+  categoryBudgetStatuses: CategoryBudgetStatus[];
+  hasSpikeToday: boolean;
+  todaySpikeReason?: { category: ExpenseCategory; amount: number };
+  overBudgetCategories: CategoryBudgetStatus[];
+  nearBudgetCategories: CategoryBudgetStatus[];
 }
 
 export const EXPENSE_TYPE_LABELS: Record<

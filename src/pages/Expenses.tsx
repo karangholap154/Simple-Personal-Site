@@ -13,6 +13,8 @@ import ExpenseCharts from "@/components/expenses/ExpenseCharts";
 import ExpenseList from "@/components/expenses/ExpenseList";
 import ExpenseEditModal from "@/components/expenses/ExpenseEditModal";
 import BudgetSettingsModal from "@/components/expenses/BudgetSettingsModal";
+import ExpenseAlertBanner from "@/components/expenses/ExpenseAlertBanner";
+import CategoryBudgetBars from "@/components/expenses/CategoryBudgetBars";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,10 +48,12 @@ const Expenses = () => {
     stats,
     isCloudSynced,
     userEmail,
+    categoryBudgets,
     addExpense,
     updateExpense,
     deleteExpense,
     updateMonthlyBudget,
+    updateCategoryBudgets,
     exportToCSV,
     signOut,
   } = useExpenses();
@@ -135,8 +139,20 @@ const Expenses = () => {
             ) : isCloudSynced ? (
               /* Authenticated User Dashboard */
               <div className="space-y-8">
+                {/* Proactive Spending Alerts (Spike / Budget Overruns) */}
+                <ExpenseAlertBanner
+                  stats={stats}
+                  onOpenBudgetModal={() => setIsBudgetModalOpen(true)}
+                />
+
                 {/* KPI Summary Cards */}
                 <ExpenseSummaryCards
+                  stats={stats}
+                  onOpenBudgetModal={() => setIsBudgetModalOpen(true)}
+                />
+
+                {/* Category Spending Caps (Micro-Budgets) */}
+                <CategoryBudgetBars
                   stats={stats}
                   onOpenBudgetModal={() => setIsBudgetModalOpen(true)}
                 />
@@ -308,7 +324,9 @@ const Expenses = () => {
           isOpen={isBudgetModalOpen}
           onClose={() => setIsBudgetModalOpen(false)}
           currentBudget={stats.monthlyBudget}
+          categoryBudgets={categoryBudgets}
           onSaveBudget={updateMonthlyBudget}
+          onSaveCategoryBudgets={updateCategoryBudgets}
         />
       </div>
     </PageTransition>
