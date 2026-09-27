@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExpenseCategory, CategoryBudgets, CATEGORY_COLORS } from "@/types/expenses";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, PieChart } from "lucide-react";
+import { Wallet, PieChart, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -63,6 +63,12 @@ export const BudgetSettingsModal = ({
     return sum + (!isNaN(num) && num > 0 ? num : 0);
   }, 0);
 
+  const masterBudgetNum = parseFloat(overallBudget) || 0;
+  const isOverflow = masterBudgetNum > 0 && totalCategoryAllocated > masterBudgetNum;
+  const overflowDiff = Math.max(0, totalCategoryAllocated - masterBudgetNum);
+  const unallocatedRemaining = Math.max(0, masterBudgetNum - totalCategoryAllocated);
+  const allocationPercentage = masterBudgetNum > 0 ? Math.round((totalCategoryAllocated / masterBudgetNum) * 100) : 0;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(overallBudget);
@@ -102,6 +108,9 @@ export const BudgetSettingsModal = ({
               <TabsTrigger value="categories" className="text-xs flex items-center gap-1.5">
                 <PieChart className="w-3.5 h-3.5" />
                 Category Caps
+                {isOverflow && (
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -131,27 +140,85 @@ export const BudgetSettingsModal = ({
               </div>
 
               {totalCategoryAllocated > 0 && (
-                <div className="p-3 rounded-lg border border-border bg-secondary/30 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span>Category caps allocated:</span>
-                  <span className="font-semibold text-foreground font-mono">
-                    ₹{totalCategoryAllocated.toLocaleString()} / ₹{parseFloat(overallBudget || "0").toLocaleString()}
-                  </span>
+                <div
+                  className={`p-3 rounded-xl border text-xs space-y-2 transition-colors ${
+                    isOverflow
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      : "border-border/80 bg-secondary/30 text-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold flex items-center gap-1.5">
+                      {isOverflow ? (
+                        <>
+                          <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                          <span className="text-destructive">Cap Allocation Overflow ({allocationPercentage}%)</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="text-foreground">Category Caps Allocated ({allocationPercentage}%)</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="font-mono font-bold text-foreground">
+                      ₹{totalCategoryAllocated.toLocaleString()} / ₹{masterBudgetNum.toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        isOverflow ? "bg-destructive" : "bg-primary"
+                      }`}
+                      style={{ width: `${Math.min(100, allocationPercentage)}%` }}
+                    />
+                  </div>
+
+                  <p className="text-[11px] leading-relaxed">
+                    {isOverflow ? (
+                      <span className="text-destructive font-medium">
+                        ⚠️ Category caps exceed your monthly limit by <strong>₹{overflowDiff.toLocaleString()}</strong>. Consider adjusting individual ceilings or raising your overall budget.
+                      </span>
+                    ) : (
+                      <span>
+                        ✓ <strong>₹{unallocatedRemaining.toLocaleString()}</strong> remaining unallocated for flexible spending.
+                      </span>
+                    )}
+                  </p>
                 </div>
               )}
             </TabsContent>
 
             {/* Tab 2: Category Spending Caps */}
             <TabsContent value="categories" className="space-y-3 pt-1">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1.5">
                 <p className="leading-tight">
                   Set optional monthly spending ceilings for high-leak categories.
                 </p>
                 {totalCategoryAllocated > 0 && (
-                  <span className="font-semibold text-foreground whitespace-nowrap font-mono self-start sm:self-auto">
-                    ₹{totalCategoryAllocated.toLocaleString()} cap
+                  <span
+                    className={`font-semibold whitespace-nowrap font-mono self-start sm:self-auto px-2 py-0.5 rounded-md text-[11px] border ${
+                      isOverflow
+                        ? "bg-destructive/15 text-destructive border-destructive/30"
+                        : "bg-secondary text-foreground border-border/60"
+                    }`}
+                  >
+                    ₹{totalCategoryAllocated.toLocaleString()} {isOverflow ? `(+₹${overflowDiff.toLocaleString()} over)` : "capped"}
                   </span>
                 )}
               </div>
+
+              {/* Overflow warning banner in Category tab */}
+              {isOverflow && (
+                <div className="p-2.5 rounded-lg border border-destructive/40 bg-destructive/10 text-destructive text-[11px] flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <strong>Ceiling Overflow Alert:</strong> Total category caps (₹{totalCategoryAllocated.toLocaleString()}) exceed your monthly budget (₹{masterBudgetNum.toLocaleString()}) by ₹{overflowDiff.toLocaleString()}.
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 pr-1">
                 {CATEGORIES.map((cat) => (

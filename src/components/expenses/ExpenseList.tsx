@@ -49,6 +49,7 @@ import {
   Activity,
   Layers,
   Check,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   format,
@@ -61,6 +62,9 @@ import {
   startOfMonth,
   endOfMonth,
   isWithinInterval,
+  subMonths,
+  startOfDay,
+  endOfDay,
 } from "date-fns";
 
 interface Props {
@@ -69,7 +73,8 @@ interface Props {
   onDeleteExpense: (id: string) => Promise<boolean>;
 }
 
-type DateFilter = "all" | "today" | "week" | "month";
+type DateFilter = "all" | "today" | "week" | "month" | "last_month" | "custom";
+type SortOption = "date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "category_asc";
 type ViewMode = "cards" | "table";
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -136,6 +141,9 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortOption>("date_desc");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [pageSize, setPageSize] = useState<number>(15);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -167,7 +175,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   // Reset pagination to page 1 whenever filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory, selectedType, dateFilter, pageSize]);
+  }, [search, selectedCategory, selectedType, dateFilter, customStartDate, customEndDate, sortBy, pageSize]);
 
   // Clean up delete timeout
   useEffect(() => {
@@ -185,6 +193,8 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
     const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
     return expenses.filter((item) => {
       const itemDate = safeParseDate(item.date);
@@ -227,10 +237,48 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
       if (dateFilter === "month" && !isWithinInterval(itemDate, { start: monthStart, end: monthEnd })) {
         return false;
       }
+      if (dateFilter === "last_month" && !isWithinInterval(itemDate, { start: lastMonthStart, end: lastMonthEnd })) {
+        return false;
+      }
+      if (dateFilter === "custom") {
+        if (customStartDate && customEndDate) {
+          const start = startOfDay(parseISO(customStartDate));
+          const end = endOfDay(parseISO(customEndDate));
+          if (isValid(start) && isValid(end) && !isWithinInterval(itemDate, { start, end })) {
+            return false;
+          }
+        } else if (customStartDate) {
+          const start = startOfDay(parseISO(customStartDate));
+          if (isValid(start) && itemDate < start) return false;
+        } else if (customEndDate) {
+          const end = endOfDay(parseISO(customEndDate));
+          if (isValid(end) && itemDate > end) return false;
+        }
+      }
 
       return true;
     });
-  }, [expenses, search, selectedCategory, selectedType, dateFilter]);
+  }, [expenses, search, selectedCategory, selectedType, dateFilter, customStartDate, customEndDate]);
+
+  // Sort filtered expenses
+  const sortedExpenses = useMemo(() => {
+    return [...filteredExpenses].sort((a, b) => {
+      if (sortBy === "date_asc") {
+        return a.date.localeCompare(b.date);
+      }
+      if (sortBy === "amount_desc") {
+        return Number(b.amount) - Number(a.amount);
+      }
+      if (sortBy === "amount_asc") {
+        return Number(a.amount) - Number(b.amount);
+      }
+      if (sortBy === "category_asc") {
+        return a.category.localeCompare(b.category);
+      }
+      // Default: date_desc
+      return b.date.localeCompare(a.date);
+    });
+  }, [filteredExpenses, sortBy]);
 
   // Financial calculations
   const totalAllSpend = useMemo(() => {
@@ -248,29 +296,54 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
     if (selectedCategory !== "all") count++;
     if (selectedType !== "all") count++;
     if (dateFilter !== "all") count++;
+    if (customStartDate || customEndDate) count++;
+    if (sortBy !== "date_desc") count++;
     return count;
-  }, [search, selectedCategory, selectedType, dateFilter]);
+  }, [search, selectedCategory, selectedType, dateFilter, customStartDate, customEndDate, sortBy]);
 
   const clearAllFilters = () => {
     setSearch("");
     setSelectedCategory("all");
     setSelectedType("all");
     setDateFilter("all");
+    setCustomStartDate("");
+    setCustomEndDate("");
+    setSortBy("date_desc");
   };
 
   // Pagination calculations
-  const totalItems = filteredExpenses.length;
+  const totalItems = sortedExpenses.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const validPage = Math.min(Math.max(1, currentPage), totalPages);
   const startIndex = (validPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalItems);
 
   const paginatedExpenses = useMemo(() => {
-    return filteredExpenses.slice(startIndex, endIndex);
-  }, [filteredExpenses, startIndex, endIndex]);
+    return sortedExpenses.slice(startIndex, endIndex);
+  }, [sortedExpenses, startIndex, endIndex]);
 
   // Group current page items by date string (yyyy-MM-dd) for Cards view
   const groupedExpenses = useMemo(() => {
+    const isDateAsc = sortBy === "date_asc";
+    const isAmountOrCategory = sortBy === "amount_desc" || sortBy === "amount_asc" || sortBy === "category_asc";
+
+    if (isAmountOrCategory) {
+      let sortLabel = "Sorted by Amount (Highest First)";
+      if (sortBy === "amount_asc") sortLabel = "Sorted by Amount (Lowest First)";
+      if (sortBy === "category_asc") sortLabel = "Sorted by Category (A–Z)";
+
+      return [
+        [
+          "sorted-stream",
+          {
+            label: sortLabel,
+            total: paginatedExpenses.reduce((s, i) => s + Number(i.amount), 0),
+            items: paginatedExpenses,
+          },
+        ] as [string, { label: string; total: number; items: ExpenseItem[] }],
+      ];
+    }
+
     const groups: Record<string, { label: string; total: number; items: ExpenseItem[] }> = {};
 
     paginatedExpenses.forEach((item) => {
@@ -296,8 +369,10 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
       groups[dateKey].total += Number(item.amount);
     });
 
-    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [paginatedExpenses]);
+    return Object.entries(groups).sort((a, b) =>
+      isDateAsc ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0])
+    );
+  }, [paginatedExpenses, sortBy]);
 
   // Safe delete handler with 2-step inline confirmation
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -326,20 +401,22 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
   return (
     <div className="space-y-3">
       {/* 1. Main Filter & Controls Toolbar */}
-      <div className="p-2 sm:p-2.5 rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md shadow-xs">
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+      <div className="p-2.5 sm:p-3 rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md shadow-xs space-y-2.5">
+        {/* Tier 1: Search Bar + View Mode Toggle */}
+        <div className="flex items-center gap-2">
           {/* Search Input with Keyboard Shortcut & Clear */}
-          <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
+          <div className="relative flex-1 min-w-0">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               ref={searchInputRef}
               placeholder="Search expenses..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-14 h-8.5 text-xs bg-background/60 border-border/70 rounded-lg focus-visible:ring-1"
+              className="pl-8 pr-14 h-9 text-xs bg-background/60 border-border/70 rounded-lg focus-visible:ring-1"
             />
             {search ? (
               <button
+                type="button"
                 onClick={() => setSearch("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
                 aria-label="Clear search"
@@ -353,36 +430,73 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
             )}
           </div>
 
+          {/* View Mode Switcher (Cards vs Table) */}
+          <div className="flex items-center bg-secondary/40 p-0.5 rounded-lg border border-border/60 shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode("cards")}
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "cards"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Comfortable card stream"
+              aria-label="Cards view"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "table"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Dense spreadsheet table"
+              aria-label="Table view"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tier 2: Date Segmented Control + Filter & Sort Dropdowns */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 pt-2 border-t border-border/30">
           {/* Date Segmented Control */}
-          <div className="flex items-center gap-0.5 bg-secondary/40 p-0.5 rounded-lg border border-border/60 self-stretch sm:self-auto justify-between sm:justify-start">
+          <div className="flex items-center gap-0.5 bg-secondary/40 p-0.5 rounded-lg border border-border/60 overflow-x-auto scrollbar-none max-w-full">
             {(
               [
                 { id: "all", label: "All" },
                 { id: "today", label: "Today" },
                 { id: "week", label: "Week" },
                 { id: "month", label: "Month" },
+                { id: "last_month", label: "Last Mo" },
+                { id: "custom", label: "Custom" },
               ] as const
             ).map((filter) => (
               <button
                 key={filter.id}
+                type="button"
                 onClick={() => setDateFilter(filter.id)}
-                className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 text-[11px] font-medium rounded-md transition-all text-center ${
+                className={`flex-1 sm:flex-initial px-2 sm:px-2.5 py-1 text-[11px] font-medium rounded-md transition-all text-center flex items-center justify-center gap-1 shrink-0 ${
                   dateFilter === filter.id
                     ? "bg-background text-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
+                {filter.id === "custom" && <Calendar className="w-2.5 h-2.5 text-primary" />}
                 {filter.label}
               </button>
             ))}
           </div>
 
-          {/* Category & Classification Selects + View Switcher */}
-          <div className="flex items-center gap-1.5 self-stretch sm:self-auto min-w-0">
+          {/* Filter & Sort Dropdowns Grid */}
+          <div className="grid grid-cols-3 gap-1.5 min-w-0 sm:flex sm:items-center">
             {/* Category Dropdown */}
-            <div className="flex-1 sm:w-36 min-w-0 sm:flex-initial">
+            <div className="w-full sm:w-32 min-w-0">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="h-8.5 text-xs bg-background/60 border-border/70 rounded-lg">
+                <SelectTrigger className="h-8 text-xs bg-background/60 border-border/70 rounded-lg px-2">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -405,9 +519,9 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
             </div>
 
             {/* Classification Dropdown */}
-            <div className="flex-1 sm:w-32 min-w-0 sm:flex-initial">
+            <div className="w-full sm:w-28 min-w-0">
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="h-8.5 text-xs bg-background/60 border-border/70 rounded-lg">
+                <SelectTrigger className="h-8 text-xs bg-background/60 border-border/70 rounded-lg px-2">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -424,41 +538,89 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                     Investments
                   </SelectItem>
                   <SelectItem value="micro" className="text-xs">
-                    Micro-Leaks (≤ ₹200)
+                    Micro (≤ ₹200)
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* View Mode Switcher (Cards vs Table) */}
-            <div className="flex items-center bg-secondary/40 p-0.5 rounded-lg border border-border/60 flex-shrink-0">
-              <button
-                onClick={() => setViewMode("cards")}
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === "cards"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Comfortable card stream"
-                aria-label="Cards view"
-              >
-                <LayoutList className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-md transition-all ${
-                  viewMode === "table"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Dense spreadsheet table"
-                aria-label="Table view"
-              >
-                <TableIcon className="w-3.5 h-3.5" />
-              </button>
+            {/* Sort Dropdown */}
+            <div className="w-full sm:w-36 min-w-0">
+              <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+                <SelectTrigger className="h-8 text-xs bg-background/60 border-border/70 rounded-lg px-2">
+                  <div className="flex items-center gap-1 truncate">
+                    <ArrowUpDown className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Sort" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date_desc" className="text-xs">
+                    Date (Newest)
+                  </SelectItem>
+                  <SelectItem value="date_asc" className="text-xs">
+                    Date (Oldest)
+                  </SelectItem>
+                  <SelectItem value="amount_desc" className="text-xs">
+                    Amount (Highest ↓)
+                  </SelectItem>
+                  <SelectItem value="amount_asc" className="text-xs">
+                    Amount (Lowest ↑)
+                  </SelectItem>
+                  <SelectItem value="category_asc" className="text-xs">
+                    Category (A–Z)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
+
+        {/* Custom Date Range Picker Drawer */}
+        {dateFilter === "custom" && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2.5 border-t border-border/40 text-xs animate-in fade-in-50 duration-200">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium shrink-0">
+                <Calendar className="w-3.5 h-3.5 text-primary" />
+                Custom Window:
+              </span>
+              <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="bg-background/80 border border-border/70 rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-32 sm:w-36"
+                  placeholder="Start Date"
+                  title="Start Date"
+                />
+                <span className="text-muted-foreground text-xs font-mono shrink-0">→</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="bg-background/80 border border-border/70 rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-32 sm:w-36"
+                  placeholder="End Date"
+                  title="End Date"
+                />
+              </div>
+              {(customStartDate || customEndDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomStartDate("");
+                    setCustomEndDate("");
+                  }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground hover:underline ml-1"
+                >
+                  Clear dates
+                </button>
+              )}
+            </div>
+
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">
+              Filtering by selected calendar window
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 2. Filtered Financial Intelligence Bar */}
@@ -737,6 +899,10 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
                             <span className="inline-flex items-center gap-1">
                               {getPaymentIcon(item.payment_method)}
                               {item.payment_method}
+                            </span>
+                            <span>•</span>
+                            <span className="font-mono text-muted-foreground text-[10px]">
+                              {format(safeParseDate(item.date), "dd MMM")}
                             </span>
                             <span>•</span>
                             <span

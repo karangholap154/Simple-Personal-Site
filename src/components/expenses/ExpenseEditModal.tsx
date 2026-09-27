@@ -200,7 +200,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:dark]"
+              className="w-full h-9 text-xs sm:text-sm bg-secondary/50 border border-border rounded-md px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
