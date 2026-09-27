@@ -38,6 +38,15 @@ const formatPhotoTitle = (name: string) => {
     .join(" ");
 };
 
+const IMAGES = Object.entries(galleryImages).map(([path, module]) => {
+  const rawName = path.split("/").pop()?.split(".")[0] || "Photo";
+  return {
+    src: module.default,
+    name: rawName,
+    title: formatPhotoTitle(rawName),
+  };
+});
+
 const Gallery = () => {
   usePageMeta({
     title: "Photography Gallery",
@@ -46,20 +55,12 @@ const Gallery = () => {
     path: "/gallery",
   });
 
+  const images = IMAGES;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-
-  const images = Object.entries(galleryImages).map(([path, module]) => {
-    const rawName = path.split("/").pop()?.split(".")[0] || "Photo";
-    return {
-      src: module.default,
-      name: rawName,
-      title: formatPhotoTitle(rawName),
-    };
-  });
 
   const openLightbox = (index: number) => {
     setSelectedIndex(index);
