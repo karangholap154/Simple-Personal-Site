@@ -53,6 +53,7 @@ import {
 import {
   format,
   parseISO,
+  isValid,
   isToday,
   isYesterday,
   startOfWeek,
@@ -121,6 +122,15 @@ const getPaymentIcon = (method: string) => {
   }
 };
 
+const safeParseDate = (dateStr: string): Date => {
+  try {
+    const parsed = parseISO(dateStr);
+    return isValid(parsed) ? parsed : new Date();
+  } catch {
+    return new Date();
+  }
+};
+
 export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props) => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -177,7 +187,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
     const monthEnd = endOfMonth(now);
 
     return expenses.filter((item) => {
-      const itemDate = parseISO(item.date);
+      const itemDate = safeParseDate(item.date);
       const itemType = item.expense_type || "need";
 
       // Search match
@@ -187,7 +197,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
         const matchesCategory = item.category.toLowerCase().includes(query);
         const matchesPayment = item.payment_method.toLowerCase().includes(query);
         const matchesAmount = item.amount.toString().includes(query);
-        const matchesType = itemType.toLowerCase().query ? itemType.toLowerCase().includes(query) : false;
+        const matchesType = itemType.toLowerCase().includes(query);
         if (!matchesNote && !matchesCategory && !matchesPayment && !matchesAmount && !matchesType) {
           return false;
         }
@@ -264,7 +274,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
     const groups: Record<string, { label: string; total: number; items: ExpenseItem[] }> = {};
 
     paginatedExpenses.forEach((item) => {
-      const parsed = parseISO(item.date);
+      const parsed = safeParseDate(item.date);
       const dateKey = format(parsed, "yyyy-MM-dd");
 
       if (!groups[dateKey]) {
@@ -545,7 +555,7 @@ export const ExpenseList = ({ expenses, onEditExpense, onDeleteExpense }: Props)
             </TableHeader>
             <TableBody className="text-xs divide-y divide-border/40">
               {paginatedExpenses.map((item) => {
-                const parsedDate = parseISO(item.date);
+                const parsedDate = safeParseDate(item.date);
                 const isConfirming = confirmDeleteId === item.id;
                 const isDeleting = deletingId === item.id;
 

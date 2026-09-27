@@ -145,7 +145,7 @@ export const ExpenseAlertBanner = ({ stats, onOpenBudgetModal }: Props) => {
           {activeNearCategories.map((c) => (
             <div key={c.category} className="flex items-start sm:items-center justify-between gap-2 text-muted-foreground py-1">
               <span className="min-w-0 leading-snug">
-                ⚠️ <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} / ₹{c.budget.toLocaleString()} ({c.remaining.toLocaleString()} left for {stats.daysRemaining} days).
+                ⚠️ <strong className="text-foreground">{c.category}</strong>: ₹{c.spent.toLocaleString()} / ₹{c.budget.toLocaleString()} (₹{c.remaining.toLocaleString()} left for {stats.daysRemaining} days).
               </span>
               <button
                 onClick={() => dismissCategory(c.category)}
