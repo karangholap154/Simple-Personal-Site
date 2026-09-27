@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
+import { toLocalISOString } from "@/lib/utils";
 
 interface Props {
   expense: ExpenseItem | null;
@@ -77,7 +78,7 @@ export const ExpenseEditModal = ({ expense, isOpen, onClose, onSave }: Props) =>
       payment_method: paymentMethod,
       expense_type: expenseType,
       notes: notes.trim(),
-      date: new Date(date).toISOString(),
+      date: toLocalISOString(date, expense.date),
     });
 
     if (success) {

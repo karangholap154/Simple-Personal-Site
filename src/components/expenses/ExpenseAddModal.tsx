@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Wallet, Sparkles, Loader2, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { toLocalISOString } from "@/lib/utils";
 
 interface Props {
   isOpen: boolean;
@@ -116,7 +117,7 @@ export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense, initialValues }
       payment_method: paymentMethod,
       expense_type: expenseType,
       notes: notes.trim(),
-      date: new Date(date).toISOString(),
+      date: toLocalISOString(date),
     });
 
     if (success) {

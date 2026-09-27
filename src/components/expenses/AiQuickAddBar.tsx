@@ -4,6 +4,7 @@ import { parseExpenseWithGroq, ParsedExpenseAI } from "@/lib/groq";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { toLocalISOString } from "@/lib/utils";
 import {
   Sparkles,
   Zap,
@@ -83,7 +84,7 @@ export const AiQuickAddBar = ({ onAddExpense, onOpenWithPrefill }: Props) => {
         payment_method: parsedItem.payment_method,
         expense_type: parsedItem.expense_type,
         notes: parsedItem.notes,
-        date: new Date(parsedItem.date).toISOString(),
+        date: toLocalISOString(parsedItem.date),
       });
 
       if (success) {
