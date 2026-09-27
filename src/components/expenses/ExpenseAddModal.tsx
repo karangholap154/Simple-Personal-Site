@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ExpenseCategory, PaymentMethod, ExpenseType, CATEGORY_COLORS, EXPENSE_TYPE_LABELS } from "@/types/expenses";
+import { parseExpenseWithGroq, ParsedExpenseAI } from "@/lib/groq";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Wallet } from "lucide-react";
+import { Plus, Wallet, Sparkles, Loader2, Zap } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +26,7 @@ interface Props {
     notes: string;
     date: string;
   }) => Promise<boolean>;
+  initialValues?: ParsedExpenseAI | null;
 }
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -46,7 +49,8 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   "NetBanking",
 ];
 
-export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense }: Props) => {
+export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense, initialValues }: Props) => {
+  const { toast } = useToast();
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>("Food & Dining");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
@@ -54,6 +58,51 @@ export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense }: Props) => {
   const [notes, setNotes] = useState<string>("");
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [submitting, setSubmitting] = useState(false);
+
+  // AI Magic Fill state inside modal
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialValues) {
+      setAmount(String(initialValues.amount));
+      setCategory(initialValues.category);
+      setPaymentMethod(initialValues.payment_method);
+      setExpenseType(initialValues.expense_type);
+      setNotes(initialValues.notes || "");
+      setDate(initialValues.date || format(new Date(), "yyyy-MM-dd"));
+    }
+  }, [initialValues, isOpen]);
+
+  const handleAiFill = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+
+    setAiLoading(true);
+    try {
+      const parsed = await parseExpenseWithGroq(aiPrompt);
+      setAmount(String(parsed.amount));
+      setCategory(parsed.category);
+      setPaymentMethod(parsed.payment_method);
+      setExpenseType(parsed.expense_type);
+      setNotes(parsed.notes);
+      setDate(parsed.date);
+      setAiPrompt("");
+      toast({
+        title: "Fields auto-filled with Groq AI! ⚡",
+        description: `₹${parsed.amount} • ${parsed.category}`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({
+        title: "AI Auto-fill failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +137,47 @@ export const ExpenseAddModal = ({ isOpen, onClose, onAddExpense }: Props) => {
             Add Expense
           </DialogTitle>
         </DialogHeader>
+
+        {/* AI Magic Fill Helper Box */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-2.5 space-y-1.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-foreground flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-primary animate-pulse" />
+              Quick Auto-Fill with AI
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
+              <Zap className="w-2.5 h-2.5 text-amber-400" /> Groq 200ms
+            </span>
+          </div>
+          <div className="flex gap-1.5 items-center">
+            <Input
+              type="text"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Type an expense description..."
+              className="h-8 text-xs bg-background/80"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAiFill(e);
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAiFill}
+              disabled={aiLoading || !aiPrompt.trim()}
+              className="h-8 text-xs px-2.5 font-medium shrink-0"
+            >
+              {aiLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                "Fill"
+              )}
+            </Button>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 py-1">
           {/* Amount */}

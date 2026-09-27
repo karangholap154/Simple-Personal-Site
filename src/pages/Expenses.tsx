@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 
 import ExpenseSummaryCards from "@/components/expenses/ExpenseSummaryCards";
 import ExpenseAddModal from "@/components/expenses/ExpenseAddModal";
+import AiQuickAddBar from "@/components/expenses/AiQuickAddBar";
+import { ParsedExpenseAI } from "@/lib/groq";
 import ExpenseCharts, { CategoryDonutMini } from "@/components/expenses/ExpenseCharts";
 import ExpenseList from "@/components/expenses/ExpenseList";
 import ExpenseEditModal from "@/components/expenses/ExpenseEditModal";
@@ -70,6 +72,7 @@ const Expenses = () => {
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [prefillExpense, setPrefillExpense] = useState<ParsedExpenseAI | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
   // Direct login state
@@ -246,8 +249,17 @@ const Expenses = () => {
                 {/* Tab 1: Daily Workspace (2-Column Bento Layout on Desktop) */}
                 <TabsContent value="overview" className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-                    {/* Left Column (8 cols on desktop): KPIs + Dense Transaction Stream */}
+                    {/* Left Column (8 cols on desktop): AI Quick Bar + KPIs + Dense Transaction Stream */}
                     <div className="lg:col-span-8 space-y-4 sm:space-y-5">
+                      {/* Groq AI Magic Quick Add Bar */}
+                      <AiQuickAddBar
+                        onAddExpense={addExpense}
+                        onOpenWithPrefill={(prefill) => {
+                          setPrefillExpense(prefill);
+                          setIsAddModalOpen(true);
+                        }}
+                      />
+
                       {/* Compact Bento KPI Summary Cards */}
                       <ExpenseSummaryCards
                         stats={stats}
@@ -448,8 +460,12 @@ const Expenses = () => {
         {/* Modals */}
         <ExpenseAddModal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setPrefillExpense(null);
+          }}
           onAddExpense={addExpense}
+          initialValues={prefillExpense}
         />
 
         <ExpenseEditModal
