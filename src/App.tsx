@@ -17,6 +17,7 @@ const PrivateAcademy = lazy(() => import("./pages/PrivateAcademy"));
 const Support = lazy(() => import("./pages/Support"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Expenses = lazy(() => import("./pages/Expenses"));
+const Diary = lazy(() => import("./pages/Diary"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -34,6 +35,7 @@ const AnimatedRoutes = () => {
         <Route path="/support" element={<Support />} />
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/expenses" element={<Expenses />} />
+        <Route path="/diary" element={<Diary />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

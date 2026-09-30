@@ -12,7 +12,7 @@ function filenameToRoute(name) {
   // remove extension
   const base = name.replace(/\.(tsx|ts|jsx|js)$/i, "");
   if (base.toLowerCase() === "index") return "/";
-  if (base.toLowerCase() === "notfound" || base.toLowerCase() === "admin") return null; // skip 404 & admin
+  if (base.toLowerCase() === "notfound" || base.toLowerCase() === "admin" || base.toLowerCase() === "diary") return null; // skip 404, admin & private diary
 
   // Convert PascalCase/CamelCase to kebab-case and lowercase
   const withDashes = base

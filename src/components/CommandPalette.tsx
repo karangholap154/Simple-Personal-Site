@@ -29,6 +29,7 @@ import {
   Moon,
   Sun,
   Terminal,
+  BookOpen,
 } from "lucide-react";
 
 const CommandPalette = () => {
@@ -85,6 +86,7 @@ const CommandPalette = () => {
 
   const appProjects = [
     { name: "Daily Expense Tracker", icon: Wallet, href: "/expenses", badge: "Live Web App" },
+    { name: "Personal Life Journal", icon: BookOpen, href: "/diary", badge: "Private Sanctuary" },
     { name: "Private Academy Engineering", icon: GraduationCap, href: "/private-academy", badge: "EdTech Platform" },
   ];
 
