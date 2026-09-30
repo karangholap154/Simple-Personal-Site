@@ -67,24 +67,26 @@ export function useDiary() {
         .order("date", { ascending: false });
 
       if (error) throw error;
-      const normalized = ((data || []) as any[]).map((item) => ({
-        ...item,
+      const rawList = (data || []) as Record<string, unknown>[];
+      const normalized = rawList.map((item) => ({
+        ...(item as unknown as DailyLogEntry),
         work_hours: Number(item.work_hours) || 0,
         learning_hours: Number(item.learning_hours) || 0,
         project_hours: Number(item.project_hours) || 0,
         unplanned_hours: Number(item.unplanned_hours) || 0,
         mood_score: item.mood_score ? Number(item.mood_score) : undefined,
-        wins_and_good_news: Array.isArray(item.wins_and_good_news) ? item.wins_and_good_news : [],
-        struggles_and_bad_news: Array.isArray(item.struggles_and_bad_news) ? item.struggles_and_bad_news : [],
-        tags: Array.isArray(item.tags) ? item.tags : [],
-        wasted_reasons: Array.isArray(item.wasted_reasons) ? item.wasted_reasons : [],
+        wins_and_good_news: Array.isArray(item.wins_and_good_news) ? (item.wins_and_good_news as string[]) : [],
+        struggles_and_bad_news: Array.isArray(item.struggles_and_bad_news) ? (item.struggles_and_bad_news as string[]) : [],
+        tags: Array.isArray(item.tags) ? (item.tags as string[]) : [],
+        wasted_reasons: Array.isArray(item.wasted_reasons) ? (item.wasted_reasons as string[]) : [],
       }));
-      setEntries(normalized as DailyLogEntry[]);
-    } catch (err: any) {
+      setEntries(normalized);
+    } catch (err: unknown) {
       console.error("Error fetching daily logs:", err);
+      const errMsg = err instanceof Error ? err.message : "Could not fetch your diary entries.";
       toast({
         title: "Failed to load journal entries",
-        description: err.message || "Could not fetch your diary entries.",
+        description: errMsg,
         variant: "destructive",
       });
     } finally {
@@ -191,17 +193,18 @@ export function useDiary() {
         clearDraft(entryData.date);
 
         // Update local entries list
+        const rawItem = data as Record<string, unknown>;
         const normalizedItem: DailyLogEntry = {
-          ...(data as any),
-          work_hours: Number(data.work_hours) || 0,
-          learning_hours: Number(data.learning_hours) || 0,
-          project_hours: Number(data.project_hours) || 0,
-          unplanned_hours: Number(data.unplanned_hours) || 0,
-          mood_score: data.mood_score ? Number(data.mood_score) : undefined,
-          wins_and_good_news: Array.isArray(data.wins_and_good_news) ? data.wins_and_good_news : [],
-          struggles_and_bad_news: Array.isArray(data.struggles_and_bad_news) ? data.struggles_and_bad_news : [],
-          tags: Array.isArray(data.tags) ? data.tags : [],
-          wasted_reasons: Array.isArray(data.wasted_reasons) ? data.wasted_reasons : [],
+          ...(rawItem as unknown as DailyLogEntry),
+          work_hours: Number(rawItem.work_hours) || 0,
+          learning_hours: Number(rawItem.learning_hours) || 0,
+          project_hours: Number(rawItem.project_hours) || 0,
+          unplanned_hours: Number(rawItem.unplanned_hours) || 0,
+          mood_score: rawItem.mood_score ? Number(rawItem.mood_score) : undefined,
+          wins_and_good_news: Array.isArray(rawItem.wins_and_good_news) ? (rawItem.wins_and_good_news as string[]) : [],
+          struggles_and_bad_news: Array.isArray(rawItem.struggles_and_bad_news) ? (rawItem.struggles_and_bad_news as string[]) : [],
+          tags: Array.isArray(rawItem.tags) ? (rawItem.tags as string[]) : [],
+          wasted_reasons: Array.isArray(rawItem.wasted_reasons) ? (rawItem.wasted_reasons as string[]) : [],
         };
 
         setEntries((prev) => {
@@ -222,11 +225,12 @@ export function useDiary() {
         });
 
         return { success: true, data };
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error saving daily log:", err);
+        const errMsg = err instanceof Error ? err.message : "Failed to save journal entry. Your draft is still saved locally.";
         toast({
           title: "Save Failed",
-          description: err.message || "Failed to save journal entry. Your draft is still saved locally.",
+          description: errMsg,
           variant: "destructive",
         });
         return { success: false, error: err };
@@ -249,11 +253,12 @@ export function useDiary() {
           title: "Entry Deleted",
           description: `Journal entry for ${date} was removed.`,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error deleting entry:", err);
+        const errMsg = err instanceof Error ? err.message : "Failed to delete entry.";
         toast({
           title: "Delete Failed",
-          description: err.message || "Failed to delete entry.",
+          description: errMsg,
           variant: "destructive",
         });
       }
@@ -276,7 +281,7 @@ export function useDiary() {
         setEntries((prev) =>
           prev.map((e) => (e.id === entry.id ? { ...e, is_starred: nextStarred } : e))
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast({
           title: "Error",
           description: "Could not update star status.",
