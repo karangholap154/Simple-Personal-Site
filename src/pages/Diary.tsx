@@ -14,6 +14,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format, subDays, addDays, parseISO, isToday } from "date-fns";
 import {
   BookOpen,
@@ -337,7 +348,7 @@ export default function Diary() {
   return (
     <PageTransition>
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <Navigation />
         </div>
 
@@ -427,23 +438,23 @@ export default function Diary() {
                 <TabsContent value="write" className="space-y-5">
                   {/* Date Navigation Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border/70 bg-card/40 backdrop-blur-xs">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={handlePrevDay}
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
                         title="Previous Day"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <Input
                           type="date"
                           value={selectedDate}
                           onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-                          className="h-8 w-36 text-xs bg-background/80 border-border/80 font-mono"
+                          className="h-8 w-32 sm:w-36 text-xs bg-background/80 border-border/80 font-mono"
                         />
                         {isToday(parseISO(selectedDate)) ? (
                           <span className="text-[11px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium border border-primary/20">
@@ -524,20 +535,20 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
 
                   {/* Actions Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                       <Button
                         type="button"
                         variant={isStarred ? "default" : "outline"}
                         size="sm"
                         onClick={() => setIsStarred(!isStarred)}
-                        className={`text-xs h-9 gap-1.5 transition-colors ${
+                        className={`text-xs h-9 gap-1.5 transition-colors flex-1 sm:flex-none ${
                           isStarred
                             ? "bg-amber-500 hover:bg-amber-600 text-black font-medium"
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-black" : ""}`} />
-                        {isStarred ? "Starred Day" : "Star This Day"}
+                        <span>{isStarred ? "Starred Day" : "Star This Day"}</span>
                       </Button>
 
                       {draftContent && !selectedDateEntry && (
@@ -549,14 +560,14 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
                             clearDraft(selectedDate);
                             setEditorText("");
                           }}
-                          className="text-xs h-9 text-muted-foreground hover:text-destructive transition-colors gap-1.5"
+                          className="text-xs h-9 text-muted-foreground hover:text-destructive transition-colors gap-1.5 flex-1 sm:flex-none"
                         >
                           Clear Draft
                         </Button>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                       {/* Optional AI Analyze Button */}
                       <Button
                         type="button"
@@ -564,7 +575,7 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
                         size="sm"
                         onClick={handleAnalyzeAI}
                         disabled={isAnalyzing || !editorText.trim()}
-                        className="text-xs h-9 gap-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                        className="text-xs h-9 gap-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors flex-1 sm:flex-none"
                       >
                         {isAnalyzing ? (
                           <>
@@ -580,23 +591,47 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
                       </Button>
 
                       {selectedDateEntry && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteEntry(selectedDateEntry.id, selectedDate)}
-                          className="text-xs h-9 text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors gap-1.5"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-9 text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors gap-1.5 flex-1 sm:flex-none"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Journal Entry?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to permanently delete your entry for{" "}
+                                <strong className="text-foreground">
+                                  {format(parseISO(selectedDate), "EEEE, MMMM d, yyyy")}
+                                </strong>
+                                ? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="text-xs">Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteEntry(selectedDateEntry.id, selectedDate)}
+                                className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Yes, Delete Entry
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
 
                       <Button
                         type="button"
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="text-xs h-9 px-5 gap-2 font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+                        className="text-xs h-9 px-5 gap-2 font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs flex-1 sm:flex-none"
                       >
                         {isSaving ? (
                           <>
@@ -798,7 +833,7 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -823,11 +858,44 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
                                   }`}
                                 />
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                    title="Delete Entry"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Journal Entry?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to permanently delete your entry for{" "}
+                                      <strong className="text-foreground">
+                                        {format(parseISO(entry.date), "EEEE, MMMM d, yyyy")}
+                                      </strong>
+                                      ? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="text-xs">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteEntry(entry.id, entry.date)}
+                                      className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Yes, Delete Entry
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
 
                           {/* HERO ELEMENT: Exact Unaltered Raw Writing */}
-                          <div className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-sans">
+                          <div className="text-xs sm:text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap font-sans break-words overflow-hidden">
                             {entry.raw_content}
                           </div>
 
@@ -977,7 +1045,9 @@ Don't worry about spelling, typos, or grammar. Your authentic words are safe her
           )}
         </main>
 
-        <Footer />
+        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-auto">
+          <Footer />
+        </div>
       </div>
     </PageTransition>
   );

@@ -44,13 +44,13 @@ const Footer = () => {
       </div>
 
       {/* Main footer line */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
         <img 
           src={signatureImage} 
           alt="Karan Signature" 
-          className="h-9 opacity-80 dark:invert-0"
+          className="h-8 sm:h-9 opacity-80 dark:invert-0"
         />
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4 sm:gap-5 flex-wrap justify-center">
           <a
             href="mailto:karangholap@zohomail.in"
             className="text-muted-foreground hover:text-foreground transition-colors p-1"
