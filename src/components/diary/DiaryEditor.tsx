@@ -12,6 +12,7 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,7 @@ interface DiaryEditorProps {
   onDeleteEntry?: () => void;
   onClearDraft?: () => void;
   hasDraft: boolean;
+  hasUnsavedChanges?: boolean;
   selectedMood?: Mood;
   onSelectMood?: (mood: Mood) => void;
   selectedEnergy?: EnergyLevel;
@@ -88,6 +90,7 @@ export const DiaryEditor: React.FC<DiaryEditorProps> = ({
   onDeleteEntry,
   onClearDraft,
   hasDraft,
+  hasUnsavedChanges = false,
   selectedMood,
   onSelectMood,
   selectedEnergy,
@@ -243,8 +246,23 @@ Spelling, typos, and grammar don't matter here. Your authentic words are permane
             <span>{isStarred ? "Starred Day" : "Star This Day"}</span>
           </Button>
 
-          {/* Clear Draft */}
-          {hasDraft && !selectedDateEntry && onClearDraft && (
+          {/* Discard Changes for existing entry */}
+          {selectedDateEntry && hasUnsavedChanges && onClearDraft && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClearDraft}
+              className="text-xs h-9 text-muted-foreground hover:text-amber-500 transition-colors gap-1.5 flex-1 sm:flex-none"
+              title="Discard unsaved edits and restore saved entry"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Discard Changes</span>
+            </Button>
+          )}
+
+          {/* Clear Draft for unwritten day */}
+          {!selectedDateEntry && hasDraft && onClearDraft && (
             <Button
               type="button"
               variant="ghost"
@@ -319,7 +337,7 @@ Spelling, typos, and grammar don't matter here. Your authentic words are permane
             </AlertDialog>
           )}
 
-          {/* Primary Save Button */}
+          {/* Primary Save / Update Button */}
           <Button
             type="button"
             onClick={onSave}
@@ -329,12 +347,12 @@ Spelling, typos, and grammar don't matter here. Your authentic words are permane
             {isSaving ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Saving...</span>
+                <span>{selectedDateEntry ? "Updating..." : "Saving..."}</span>
               </>
             ) : (
               <>
                 <Save className="w-3.5 h-3.5" />
-                <span>Save Entry</span>
+                <span>{selectedDateEntry ? "Update Entry" : "Save Entry"}</span>
               </>
             )}
           </Button>

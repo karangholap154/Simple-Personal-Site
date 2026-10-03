@@ -158,35 +158,64 @@ export function useDiary() {
       }
 
       try {
+        const existingEntry = entries.find((e) => e.date === entryData.date);
+        const isUpdate = Boolean(existingEntry);
+
         const payload = {
           user_id: session.user.id,
           date: entryData.date,
           raw_content: entryData.raw_content,
-          work_hours: entryData.work_hours ?? 0,
-          learning_hours: entryData.learning_hours ?? 0,
-          project_hours: entryData.project_hours ?? 0,
-          unplanned_hours: entryData.unplanned_hours ?? 0,
-          wasted_reasons: entryData.wasted_reasons ?? [],
-          mood: entryData.mood || null,
-          mood_score: entryData.mood_score || null,
-          energy_level: entryData.energy_level || null,
-          wins_and_good_news: entryData.wins_and_good_news ?? [],
-          struggles_and_bad_news: entryData.struggles_and_bad_news ?? [],
-          learnings_and_reflections: entryData.learnings_and_reflections || null,
-          tomorrow_priority: entryData.tomorrow_priority || null,
-          tags: entryData.tags ?? [],
-          is_starred: entryData.is_starred ?? false,
-          ai_summary: entryData.ai_summary || null,
-          ai_coach_feedback: entryData.ai_coach_feedback || null,
+          work_hours: entryData.work_hours ?? existingEntry?.work_hours ?? 0,
+          learning_hours: entryData.learning_hours ?? existingEntry?.learning_hours ?? 0,
+          project_hours: entryData.project_hours ?? existingEntry?.project_hours ?? 0,
+          unplanned_hours: entryData.unplanned_hours ?? existingEntry?.unplanned_hours ?? 0,
+          wasted_reasons: entryData.wasted_reasons ?? existingEntry?.wasted_reasons ?? [],
+          mood: entryData.mood !== undefined ? entryData.mood : (existingEntry?.mood || null),
+          mood_score: entryData.mood_score !== undefined ? entryData.mood_score : (existingEntry?.mood_score || null),
+          energy_level: entryData.energy_level !== undefined ? entryData.energy_level : (existingEntry?.energy_level || null),
+          wins_and_good_news: entryData.wins_and_good_news ?? existingEntry?.wins_and_good_news ?? [],
+          struggles_and_bad_news: entryData.struggles_and_bad_news ?? existingEntry?.struggles_and_bad_news ?? [],
+          learnings_and_reflections:
+            entryData.learnings_and_reflections !== undefined
+              ? entryData.learnings_and_reflections
+              : (existingEntry?.learnings_and_reflections || null),
+          tomorrow_priority:
+            entryData.tomorrow_priority !== undefined
+              ? entryData.tomorrow_priority
+              : (existingEntry?.tomorrow_priority || null),
+          tags: entryData.tags ?? existingEntry?.tags ?? [],
+          is_starred:
+            entryData.is_starred !== undefined
+              ? entryData.is_starred
+              : (existingEntry?.is_starred ?? false),
+          ai_summary:
+            entryData.ai_summary !== undefined
+              ? entryData.ai_summary
+              : (existingEntry?.ai_summary || null),
+          ai_coach_feedback:
+            entryData.ai_coach_feedback !== undefined
+              ? entryData.ai_coach_feedback
+              : (existingEntry?.ai_coach_feedback || null),
           updated_at: new Date().toISOString(),
         };
 
-        const { data, error } = await supabase
-          .from("daily_logs")
-          .upsert(payload, { onConflict: "user_id,date" })
-          .select()
-          .single();
+        let result;
+        if (existingEntry) {
+          result = await supabase
+            .from("daily_logs")
+            .update(payload)
+            .eq("id", existingEntry.id)
+            .select()
+            .single();
+        } else {
+          result = await supabase
+            .from("daily_logs")
+            .upsert(payload, { onConflict: "user_id,date" })
+            .select()
+            .single();
+        }
 
+        const { data, error } = result;
         if (error) throw error;
 
         // Clear local draft upon successful save
@@ -220,11 +249,13 @@ export function useDiary() {
         });
 
         toast({
-          title: "Entry Saved",
-          description: `Your journal entry for ${entryData.date} is securely stored.`,
+          title: isUpdate ? "Entry Updated" : "Entry Saved",
+          description: isUpdate
+            ? `Your journal entry for ${entryData.date} was updated.`
+            : `Your journal entry for ${entryData.date} is securely stored.`,
         });
 
-        return { success: true, data };
+        return { success: true, data: normalizedItem };
       } catch (err: unknown) {
         console.error("Error saving daily log:", err);
         const errMsg = err instanceof Error ? err.message : "Failed to save journal entry. Your draft is still saved locally.";
@@ -236,7 +267,7 @@ export function useDiary() {
         return { success: false, error: err };
       }
     },
-    [session?.user, clearDraft, toast]
+    [session?.user, entries, clearDraft, toast]
   );
 
   // Delete an entry

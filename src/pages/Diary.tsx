@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
@@ -66,60 +66,81 @@ export default function Diary() {
   // Zen Mode state
   const [isZenMode, setIsZenMode] = useState<boolean>(false);
 
+  const lastLoadedDateRef = useRef<string | null>(null);
+  const lastLoadedEntryIdRef = useRef<string | null>(null);
+
   // Sync editor text and AI analysis when selectedDate or entry changes
   useEffect(() => {
-    if (selectedDateEntry) {
-      setEditorText(selectedDateEntry.raw_content);
-      setIsStarred(selectedDateEntry.is_starred || false);
-      setSelectedMood(selectedDateEntry.mood);
-      setSelectedEnergy(selectedDateEntry.energy_level);
+    const isDateChange = lastLoadedDateRef.current !== selectedDate;
+    const isInitialEntryLoad =
+      !isDateChange &&
+      selectedDateEntry &&
+      lastLoadedEntryIdRef.current !== selectedDateEntry.id;
 
-      // Reconstruct existing AI metadata if previously analyzed
-      const hasAIAnalysis =
-        Boolean(selectedDateEntry.ai_coach_feedback) ||
-        Boolean(selectedDateEntry.ai_summary) ||
-        Boolean(selectedDateEntry.mood) ||
-        Number(selectedDateEntry.work_hours) > 0 ||
-        Number(selectedDateEntry.unplanned_hours) > 0 ||
-        (Array.isArray(selectedDateEntry.wins_and_good_news) && selectedDateEntry.wins_and_good_news.length > 0);
+    if (isDateChange || isInitialEntryLoad) {
+      lastLoadedDateRef.current = selectedDate;
+      lastLoadedEntryIdRef.current = selectedDateEntry?.id ?? null;
 
-      if (hasAIAnalysis) {
-        setParsedAI({
-          work_hours: Number(selectedDateEntry.work_hours) || 0,
-          work_hours_confidence: "high",
-          learning_hours: Number(selectedDateEntry.learning_hours) || 0,
-          learning_hours_confidence: "high",
-          unplanned_hours: Number(selectedDateEntry.unplanned_hours) || 0,
-          unplanned_hours_confidence: "high",
-          wasted_reasons: selectedDateEntry.wasted_reasons || [],
-          mood: selectedDateEntry.mood || "neutral",
-          mood_score: selectedDateEntry.mood_score || 7,
-          mood_confidence: "high",
-          energy_level: selectedDateEntry.energy_level || "medium",
-          energy_confidence: "high",
-          wins_and_good_news: selectedDateEntry.wins_and_good_news || [],
-          struggles_and_bad_news: selectedDateEntry.struggles_and_bad_news || [],
-          projects_mentioned: [],
-          people_mentioned: [],
-          learnings_and_reflections: selectedDateEntry.learnings_and_reflections || "",
-          tomorrow_priority: selectedDateEntry.tomorrow_priority || null,
-          suggested_tags: selectedDateEntry.tags || [],
-          potential_memories: [],
-          summary: selectedDateEntry.ai_summary || "",
-          ai_coach_feedback: selectedDateEntry.ai_coach_feedback || "",
-        });
+      if (selectedDateEntry) {
+        // If there is an uncommitted local draft for this date that differs from cloud, prefer the draft
+        const savedDraft = localStorage.getItem(`karan_diary_draft_${selectedDate}`);
+        if (savedDraft && savedDraft.trim() && savedDraft !== selectedDateEntry.raw_content) {
+          setEditorText(savedDraft);
+        } else {
+          setEditorText(selectedDateEntry.raw_content);
+        }
+        setIsStarred(selectedDateEntry.is_starred || false);
+        setSelectedMood(selectedDateEntry.mood);
+        setSelectedEnergy(selectedDateEntry.energy_level);
+
+        // Reconstruct existing AI metadata if previously analyzed
+        const hasAIAnalysis =
+          Boolean(selectedDateEntry.ai_coach_feedback) ||
+          Boolean(selectedDateEntry.ai_summary) ||
+          Boolean(selectedDateEntry.mood) ||
+          Number(selectedDateEntry.work_hours) > 0 ||
+          Number(selectedDateEntry.unplanned_hours) > 0 ||
+          (Array.isArray(selectedDateEntry.wins_and_good_news) && selectedDateEntry.wins_and_good_news.length > 0);
+
+        if (hasAIAnalysis) {
+          setParsedAI({
+            work_hours: Number(selectedDateEntry.work_hours) || 0,
+            work_hours_confidence: "high",
+            learning_hours: Number(selectedDateEntry.learning_hours) || 0,
+            learning_hours_confidence: "high",
+            unplanned_hours: Number(selectedDateEntry.unplanned_hours) || 0,
+            unplanned_hours_confidence: "high",
+            wasted_reasons: selectedDateEntry.wasted_reasons || [],
+            mood: selectedDateEntry.mood || "neutral",
+            mood_score: selectedDateEntry.mood_score || 7,
+            mood_confidence: "high",
+            energy_level: selectedDateEntry.energy_level || "medium",
+            energy_confidence: "high",
+            wins_and_good_news: selectedDateEntry.wins_and_good_news || [],
+            struggles_and_bad_news: selectedDateEntry.struggles_and_bad_news || [],
+            projects_mentioned: [],
+            people_mentioned: [],
+            learnings_and_reflections: selectedDateEntry.learnings_and_reflections || "",
+            tomorrow_priority: selectedDateEntry.tomorrow_priority || null,
+            suggested_tags: selectedDateEntry.tags || [],
+            potential_memories: [],
+            summary: selectedDateEntry.ai_summary || "",
+            ai_coach_feedback: selectedDateEntry.ai_coach_feedback || "",
+          });
+        } else {
+          setParsedAI(null);
+        }
       } else {
+        // Use local draft if present, otherwise blank
+        const savedDraft = localStorage.getItem(`karan_diary_draft_${selectedDate}`) || "";
+        setEditorText(savedDraft);
+        setIsStarred(false);
+        setSelectedMood(undefined);
+        setSelectedEnergy(undefined);
         setParsedAI(null);
       }
-    } else {
-      // Use local draft if present, otherwise blank
-      setEditorText(draftContent);
-      setIsStarred(false);
-      setSelectedMood(undefined);
-      setSelectedEnergy(undefined);
-      setParsedAI(null);
     }
-  }, [selectedDate, selectedDateEntry, draftContent]);
+  }, [selectedDate, selectedDateEntry]);
 
   // Handle typing with autosave to local draft
   const handleTextChange = useCallback(
@@ -127,9 +148,11 @@ export default function Diary() {
       setEditorText(text);
       if (!selectedDateEntry || text !== selectedDateEntry.raw_content) {
         saveDraft(text, selectedDate);
+      } else {
+        clearDraft(selectedDate);
       }
     },
-    [selectedDateEntry, selectedDate, saveDraft]
+    [selectedDateEntry, selectedDate, saveDraft, clearDraft]
   );
 
   // Run Groq AI analysis on the raw text and automatically save to database
@@ -172,8 +195,9 @@ export default function Diary() {
         ai_coach_feedback: result.ai_coach_feedback,
       });
 
-      if (saveRes.success) {
+      if (saveRes.success && saveRes.data) {
         clearDraft(selectedDate);
+        lastLoadedEntryIdRef.current = (saveRes.data as DailyLogEntry).id;
       }
 
       toast({
@@ -227,10 +251,24 @@ export default function Diary() {
     });
     setIsSaving(false);
 
-    if (result.success) {
+    if (result.success && result.data) {
       clearDraft(selectedDate);
+      lastLoadedEntryIdRef.current = (result.data as DailyLogEntry).id;
     }
   };
+
+  // Check if current editor has unsaved changes compared to cloud entry
+  const hasUnsavedChanges = useMemo(() => {
+    if (selectedDateEntry) {
+      return (
+        editorText !== selectedDateEntry.raw_content ||
+        isStarred !== (selectedDateEntry.is_starred || false) ||
+        (selectedMood !== undefined && selectedMood !== selectedDateEntry.mood) ||
+        (selectedEnergy !== undefined && selectedEnergy !== selectedDateEntry.energy_level)
+      );
+    }
+    return editorText.trim().length > 0;
+  }, [selectedDateEntry, editorText, isStarred, selectedMood, selectedEnergy]);
 
   // Compute streak & quick stats
   const stats = useMemo(() => {
@@ -312,6 +350,7 @@ export default function Diary() {
                     entries={entries}
                     selectedDateEntry={selectedDateEntry}
                     draftLastSaved={draftLastSaved}
+                    hasUnsavedChanges={hasUnsavedChanges}
                   />
 
                   {/* Sacred Writing Area & Action Toolbar */}
@@ -326,12 +365,31 @@ export default function Diary() {
                     isAnalyzing={isAnalyzing}
                     onAnalyzeAI={handleAnalyzeAI}
                     selectedDateEntry={selectedDateEntry}
-                    onDeleteEntry={() => deleteEntry(selectedDateEntry!.id, selectedDate)}
+                    onDeleteEntry={() => {
+                      if (selectedDateEntry) {
+                        deleteEntry(selectedDateEntry.id, selectedDate);
+                        clearDraft(selectedDate);
+                        setEditorText("");
+                        setParsedAI(null);
+                        setIsStarred(false);
+                        setSelectedMood(undefined);
+                        setSelectedEnergy(undefined);
+                        lastLoadedEntryIdRef.current = null;
+                      }
+                    }}
                     onClearDraft={() => {
                       clearDraft(selectedDate);
-                      setEditorText("");
+                      if (selectedDateEntry) {
+                        setEditorText(selectedDateEntry.raw_content);
+                        setIsStarred(selectedDateEntry.is_starred || false);
+                        setSelectedMood(selectedDateEntry.mood);
+                        setSelectedEnergy(selectedDateEntry.energy_level);
+                      } else {
+                        setEditorText("");
+                      }
                     }}
                     hasDraft={Boolean(draftContent)}
+                    hasUnsavedChanges={hasUnsavedChanges}
                     selectedMood={selectedMood}
                     onSelectMood={setSelectedMood}
                     selectedEnergy={selectedEnergy}
@@ -381,6 +439,7 @@ export default function Diary() {
           onSave={handleSave}
           isCloudSaved={Boolean(selectedDateEntry)}
           draftLastSaved={draftLastSaved}
+          hasUnsavedChanges={hasUnsavedChanges}
         />
 
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-auto">

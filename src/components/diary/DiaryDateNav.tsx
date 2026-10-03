@@ -19,6 +19,7 @@ interface DiaryDateNavProps {
   entries: DailyLogEntry[];
   selectedDateEntry: DailyLogEntry | null;
   draftLastSaved: Date | null;
+  hasUnsavedChanges?: boolean;
 }
 
 export const DiaryDateNav: React.FC<DiaryDateNavProps> = ({
@@ -27,6 +28,7 @@ export const DiaryDateNav: React.FC<DiaryDateNavProps> = ({
   entries,
   selectedDateEntry,
   draftLastSaved,
+  hasUnsavedChanges = false,
 }) => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const currentDate = parseISO(selectedDate);
@@ -168,10 +170,15 @@ export const DiaryDateNav: React.FC<DiaryDateNavProps> = ({
 
       {/* Sync Status Badge */}
       <div className="flex items-center gap-2 text-xs self-start sm:self-center">
-        {selectedDateEntry ? (
+        {selectedDateEntry && !hasUnsavedChanges ? (
           <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px]">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Saved in Cloud
+          </span>
+        ) : selectedDateEntry && hasUnsavedChanges ? (
+          <span className="inline-flex items-center gap-1.5 text-amber-400 font-medium px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px]">
+            <RotateCcw className="w-3.5 h-3.5" />
+            Unsaved Changes (Draft saved)
           </span>
         ) : draftLastSaved ? (
           <span className="inline-flex items-center gap-1.5 text-amber-400 font-medium px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px]">

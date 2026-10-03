@@ -16,6 +16,7 @@ interface DiaryZenModalProps {
   onSave: () => void;
   isCloudSaved: boolean;
   draftLastSaved: Date | null;
+  hasUnsavedChanges?: boolean;
 }
 
 export const DiaryZenModal: React.FC<DiaryZenModalProps> = ({
@@ -30,6 +31,7 @@ export const DiaryZenModal: React.FC<DiaryZenModalProps> = ({
   onSave,
   isCloudSaved,
   draftLastSaved,
+  hasUnsavedChanges = false,
 }) => {
   // Listen for Escape key
   useEffect(() => {
@@ -59,9 +61,13 @@ export const DiaryZenModal: React.FC<DiaryZenModalProps> = ({
           <span className="text-sm font-semibold tracking-wide text-foreground">
             {format(parseISO(selectedDate), "EEEE, MMMM d, yyyy")}
           </span>
-          {isCloudSaved ? (
+          {isCloudSaved && !hasUnsavedChanges ? (
             <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
               <CheckCircle2 className="w-3 h-3" /> Saved in Cloud
+            </span>
+          ) : isCloudSaved && hasUnsavedChanges ? (
+            <span className="text-[11px] text-amber-400 flex items-center gap-1 font-medium">
+              <RotateCcw className="w-3 h-3" /> Unsaved edits (Draft saved)
             </span>
           ) : draftLastSaved ? (
             <span className="text-[11px] text-amber-400 flex items-center gap-1 font-medium">
@@ -94,7 +100,7 @@ export const DiaryZenModal: React.FC<DiaryZenModalProps> = ({
             className="h-8 text-xs gap-1.5 px-3.5 font-medium"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>Save</span>
+            <span>{isCloudSaved ? (isSaving ? "Updating..." : "Update") : (isSaving ? "Saving..." : "Save")}</span>
           </Button>
 
           <Button
