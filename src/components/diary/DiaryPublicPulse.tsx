@@ -14,6 +14,12 @@ import {
   ShieldCheck,
   Brain,
   Feather,
+  Zap,
+  GraduationCap,
+  Briefcase,
+  BarChart2,
+  Smile,
+  Cpu,
 } from "lucide-react";
 import { format, subDays, startOfWeek, addDays, subWeeks, parseISO, isAfter } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -25,11 +31,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface DayOfWeekCount {
+  day: string;
+  count: number;
+}
+
 interface PublicDiaryPulseData {
   dates: string[];
   total_entries: number;
   latest_date: string | null;
   tags: string[];
+  total_work_hours?: number;
+  total_learning_hours?: number;
+  total_focus_hours?: number;
+  average_mood?: number;
+  dow_counts?: DayOfWeekCount[];
 }
 
 interface DiaryPublicPulseProps {
@@ -131,6 +147,46 @@ export const DiaryPublicPulse: React.FC<DiaryPublicPulseProps> = ({ onOpenAuth }
 
     return { weeks: generatedWeeks, monthPositions: positions };
   }, [datesSet]);
+
+  // Focus & Consistency metrics
+  const {
+    totalFocusHours,
+    workHours,
+    learningHours,
+    workPercent,
+    learningPercent,
+    averageMood,
+    dowCounts,
+    maxDowCount,
+  } = useMemo(() => {
+    const focus = Number(pulse?.total_focus_hours) || 0;
+    const work = Number(pulse?.total_work_hours) || 0;
+    const learning = Number(pulse?.total_learning_hours) || 0;
+    const workPct = focus > 0 ? Math.round((work / focus) * 100) : 0;
+    const learningPct = focus > 0 ? 100 - workPct : 0;
+    const mood = Number(pulse?.average_mood) || 0;
+    const dows = pulse?.dow_counts || [
+      { day: "Sun", count: 0 },
+      { day: "Mon", count: 0 },
+      { day: "Tue", count: 0 },
+      { day: "Wed", count: 0 },
+      { day: "Thu", count: 0 },
+      { day: "Fri", count: 0 },
+      { day: "Sat", count: 0 },
+    ];
+    const maxCount = Math.max(...dows.map((d) => d.count), 1);
+
+    return {
+      totalFocusHours: focus,
+      workHours: work,
+      learningHours: learning,
+      workPercent: workPct,
+      learningPercent: learningPct,
+      averageMood: mood,
+      dowCounts: dows,
+      maxDowCount: maxCount,
+    };
+  }, [pulse]);
 
   return (
     <div className="space-y-8 py-4 sm:py-6">
@@ -369,6 +425,136 @@ export const DiaryPublicPulse: React.FC<DiaryPublicPulseProps> = ({ onOpenAuth }
             </div>
           </div>
         )}
+      </div>
+
+      {/* Deep Work & Focus Analytics Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left: Total Focus Hours & Learning vs Building Ratio */}
+        <div className="rounded-3xl border border-border bg-card/60 backdrop-blur-md p-6 sm:p-7 space-y-5 shadow-md flex flex-col justify-between">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-foreground">Deep Work & Focus Ratio</h3>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono border-primary/20 bg-primary/5 text-primary">
+                Live Audit
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Total engineering focus hours audited across evening reflections:
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Total Focus Hours Banner */}
+            <div className="flex items-baseline justify-between p-3.5 rounded-2xl bg-secondary/30 border border-border/50">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-primary" />
+                Total Focus Logged
+              </span>
+              <div className="text-2xl font-bold font-mono text-foreground">
+                {totalFocusHours.toFixed(1)} <span className="text-xs font-normal text-muted-foreground font-sans">hrs</span>
+              </div>
+            </div>
+
+            {/* Split Progress Bar: Building vs Learning */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-foreground flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-primary" />
+                  Building ({workPercent}%)
+                </span>
+                <span className="font-medium text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  Learning ({learningPercent}%)
+                </span>
+              </div>
+
+              <div className="h-3 w-full bg-secondary/70 rounded-full overflow-hidden flex border border-border/50 p-0.5">
+                <div
+                  style={{ width: `${workPercent}%` }}
+                  className="bg-primary h-full rounded-full transition-all"
+                  title={`Building / Dev: ${workHours.toFixed(1)} hrs (${workPercent}%)`}
+                />
+                <div
+                  style={{ width: `${learningPercent}%` }}
+                  className="bg-emerald-500 h-full rounded-full transition-all ml-0.5"
+                  title={`Research & Learning: ${learningHours.toFixed(1)} hrs (${learningPercent}%)`}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono pt-1">
+                <span>{workHours.toFixed(1)} hrs projects & dev</span>
+                <span>{learningHours.toFixed(1)} hrs study & research</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Average Evening Mood / Energy Index */}
+          <div className="pt-3 border-t border-border/40 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <Smile className="w-3.5 h-3.5 text-amber-500" />
+              Average Evening Mood
+            </span>
+            <span className="font-mono font-semibold text-foreground">
+              {averageMood.toFixed(1)} / 10 <span className="text-muted-foreground font-sans font-normal text-[11px]">(Focused & Steady)</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Right: Most Active Journaling Days (7-day Consistency Distribution) */}
+        <div className="rounded-3xl border border-border bg-card/60 backdrop-blur-md p-6 sm:p-7 space-y-5 shadow-md flex flex-col justify-between">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                  <BarChart2 className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-foreground">Weekly Reflection Pattern</h3>
+              </div>
+              <span className="text-[11px] font-mono text-muted-foreground">7 Days</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Consistency distribution showing which days reflections were recorded most:
+            </p>
+          </div>
+
+          {/* 7-Day Mini Bar Chart */}
+          <div className="flex items-end justify-between gap-2.5 h-28 pt-4 px-1">
+            {dowCounts.map((item) => {
+              const heightPercent = maxDowCount > 0 ? (item.count / maxDowCount) * 100 : 0;
+              return (
+                <div key={item.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                  <div className="text-[10px] font-mono font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                    {item.count > 0 ? item.count : "-"}
+                  </div>
+                  <div className="w-full max-w-[28px] bg-secondary/50 rounded-md overflow-hidden flex items-end h-16 border border-border/40 p-0.5">
+                    <div
+                      style={{ height: `${Math.max(heightPercent, 12)}%` }}
+                      className={`w-full rounded-xs transition-all ${
+                        item.count > 0
+                          ? "bg-emerald-500 dark:bg-emerald-400 group-hover:brightness-110 shadow-xs shadow-emerald-500/30"
+                          : "bg-muted/40"
+                      }`}
+                    />
+                  </div>
+                  <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+                    {item.day}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Explanatory footnote */}
+          <div className="pt-3 border-t border-border/40 text-[11px] text-muted-foreground flex items-center justify-between">
+            <span>Verified across all logged entries</span>
+            <span className="font-mono text-emerald-500 dark:text-emerald-400 font-medium">100% Habit Pulse</span>
+          </div>
+        </div>
       </div>
 
       {/* Dynamic Focus Topics / AI Tags Cloud */}
