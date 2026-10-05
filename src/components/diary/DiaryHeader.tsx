@@ -9,6 +9,7 @@ interface DiaryHeaderProps {
   totalEntries: number;
   onSignOut: () => void;
   onToggleZen: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const DiaryHeader: React.FC<DiaryHeaderProps> = ({
@@ -18,6 +19,7 @@ export const DiaryHeader: React.FC<DiaryHeaderProps> = ({
   totalEntries,
   onSignOut,
   onToggleZen,
+  onOpenAuth,
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
@@ -62,7 +64,7 @@ export const DiaryHeader: React.FC<DiaryHeaderProps> = ({
         </div>
       </div>
 
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <div className="flex items-center gap-2 self-start sm:self-center">
           <Button
             variant="outline"
@@ -86,7 +88,20 @@ export const DiaryHeader: React.FC<DiaryHeaderProps> = ({
             <span>Sign Out</span>
           </Button>
         </div>
-      )}
+      ) : onOpenAuth ? (
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenAuth}
+            className="text-xs h-8 gap-1.5 border-border/80 hover:bg-secondary/60 hover:border-primary/40 transition-colors"
+            title="Authenticate as Journal Owner"
+          >
+            <Lock className="w-3.5 h-3.5 text-amber-500" />
+            <span>Owner Access</span>
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 };

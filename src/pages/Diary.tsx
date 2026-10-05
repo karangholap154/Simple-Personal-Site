@@ -18,7 +18,8 @@ import DiaryEditor from "@/components/diary/DiaryEditor";
 import DiaryAiInsights from "@/components/diary/DiaryAiInsights";
 import DiaryOnThisDay from "@/components/diary/DiaryOnThisDay";
 import DiaryHistory from "@/components/diary/DiaryHistory";
-import DiaryAuthCard from "@/components/diary/DiaryAuthCard";
+import DiaryPublicPulse from "@/components/diary/DiaryPublicPulse";
+import DiaryAuthModal from "@/components/diary/DiaryAuthModal";
 import DiaryZenModal from "@/components/diary/DiaryZenModal";
 
 export default function Diary() {
@@ -65,6 +66,9 @@ export default function Diary() {
 
   // Zen Mode state
   const [isZenMode, setIsZenMode] = useState<boolean>(false);
+
+  // Owner Auth Modal state (for public visitors)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   const lastLoadedDateRef = useRef<string | null>(null);
   const lastLoadedEntryIdRef = useRef<string | null>(null);
@@ -306,6 +310,7 @@ export default function Diary() {
             totalEntries={stats.totalEntries}
             onSignOut={signOut}
             onToggleZen={() => setIsZenMode(true)}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
           />
 
           {/* Loading Skeleton */}
@@ -421,10 +426,16 @@ export default function Diary() {
               </Tabs>
             </div>
           ) : (
-            /* Unauthenticated Private Access Card */
-            <DiaryAuthCard />
+            /* Dynamic Public Pulse with Live Habit Heatmap & Metrics */
+            <DiaryPublicPulse onOpenAuth={() => setIsAuthModalOpen(true)} />
           )}
         </main>
+
+        {/* Owner Authentication Modal Dialog */}
+        <DiaryAuthModal
+          isOpen={isAuthModalOpen}
+          onOpenChange={setIsAuthModalOpen}
+        />
 
         {/* Zen Focus Mode Modal */}
         <DiaryZenModal
