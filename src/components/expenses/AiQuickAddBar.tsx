@@ -15,6 +15,7 @@ import {
   CreditCard,
   Tag,
   ArrowRight,
+  Layers,
 } from "lucide-react";
 
 interface Props {
@@ -27,9 +28,10 @@ interface Props {
     date: string;
   }) => Promise<boolean>;
   onOpenWithPrefill?: (prefill: ParsedExpenseAI) => void;
+  onOpenBulkAdd?: () => void;
 }
 
-export const AiQuickAddBar = ({ onAddExpense, onOpenWithPrefill }: Props) => {
+export const AiQuickAddBar = ({ onAddExpense, onOpenWithPrefill, onOpenBulkAdd }: Props) => {
   const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -135,6 +137,18 @@ export const AiQuickAddBar = ({ onAddExpense, onOpenWithPrefill }: Props) => {
             </span>
           </span>
         </div>
+        {onOpenBulkAdd && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onOpenBulkAdd}
+            className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5 px-2 font-medium"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Bulk Paste Mode
+          </Button>
+        )}
       </div>
 
       {/* Main input & Parse button */}

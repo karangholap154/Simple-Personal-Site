@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 
 import ExpenseSummaryCards from "@/components/expenses/ExpenseSummaryCards";
 import ExpenseAddModal from "@/components/expenses/ExpenseAddModal";
+import BulkExpenseModal from "@/components/expenses/BulkExpenseModal";
 import AiQuickAddBar from "@/components/expenses/AiQuickAddBar";
 import { ParsedExpenseAI } from "@/lib/groq";
 import ExpenseCharts, { CategoryDonutMini } from "@/components/expenses/ExpenseCharts";
@@ -40,6 +41,7 @@ import {
   Sliders,
   Plus,
   Loader2,
+  Layers,
 } from "lucide-react";
 
 const Expenses = () => {
@@ -58,6 +60,7 @@ const Expenses = () => {
     userEmail,
     categoryBudgets,
     addExpense,
+    addBulkExpenses,
     updateExpense,
     deleteExpense,
     updateMonthlyBudget,
@@ -72,6 +75,7 @@ const Expenses = () => {
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [prefillExpense, setPrefillExpense] = useState<ParsedExpenseAI | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -184,6 +188,15 @@ const Expenses = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setIsBulkModalOpen(true)}
+                  className="text-xs h-8 gap-1.5 font-medium border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-primary w-full sm:w-auto"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Bulk Add
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsBudgetModalOpen(true)}
                   className="text-xs h-8 gap-1.5 w-full sm:w-auto"
                 >
@@ -258,6 +271,7 @@ const Expenses = () => {
                           setPrefillExpense(prefill);
                           setIsAddModalOpen(true);
                         }}
+                        onOpenBulkAdd={() => setIsBulkModalOpen(true)}
                       />
 
                       {/* Compact Bento KPI Summary Cards */}
@@ -466,6 +480,12 @@ const Expenses = () => {
           }}
           onAddExpense={addExpense}
           initialValues={prefillExpense}
+        />
+
+        <BulkExpenseModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          onAddBulkExpenses={addBulkExpenses}
         />
 
         <ExpenseEditModal

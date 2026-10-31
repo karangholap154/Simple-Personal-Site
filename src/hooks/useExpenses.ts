@@ -205,6 +205,67 @@ export function useExpenses() {
     }
   };
 
+  // Bulk Add Expenses - requires authentication
+  const addBulkExpenses = async (
+    items: Omit<ExpenseItem, "id" | "user_id" | "created_at">[]
+  ): Promise<boolean> => {
+    if (!session?.user) {
+      toast({
+        title: "Login Required",
+        description: "You must be logged in as admin to record expenses.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!items || items.length === 0) {
+      toast({
+        title: "No expenses provided",
+        description: "Please provide at least one expense to add.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const payloads = items.map((item) => ({
+        user_id: session.user.id,
+        amount: item.amount,
+        category: item.category,
+        payment_method: item.payment_method,
+        expense_type: item.expense_type || "need",
+        notes: item.notes || "",
+        date: item.date || new Date().toISOString(),
+      }));
+
+      const { data, error } = await supabase
+        .from("expenses")
+        .insert(payloads)
+        .select();
+
+      if (error) throw error;
+
+      const inserted = (data as ExpenseItem[]) || [];
+      setExpenses((prev) => [...inserted, ...prev]);
+
+      const totalAmount = inserted.reduce((sum, item) => sum + item.amount, 0);
+
+      toast({
+        title: "Bulk expenses added",
+        description: `Successfully recorded ${inserted.length} expenses totaling ₹${totalAmount.toLocaleString()}`,
+      });
+      return true;
+    } catch (err) {
+      console.error("Failed to add bulk expenses:", err);
+      toast({
+        title: "Failed to add bulk expenses",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   // Edit Expense - requires authentication
   const updateExpense = async (
     id: string,
@@ -511,6 +572,7 @@ export function useExpenses() {
     userEmail: session?.user?.email,
     categoryBudgets,
     addExpense,
+    addBulkExpenses,
     updateExpense,
     deleteExpense,
     updateMonthlyBudget,
